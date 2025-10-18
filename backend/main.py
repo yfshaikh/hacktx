@@ -5,6 +5,8 @@ import logging
 import os
 # from routes.chat_routes import chat_router
 from routes.eleven_routes import eleven_router
+from routes.car_routes import router as car_router
+from routes.agent_tools import router as agent_tools_router
 from utils.initialize_supabase import get_supabase_client
 
 # Configure logging
@@ -40,6 +42,8 @@ except Exception as e:
 
 # Include routes
 app.include_router(eleven_router)
+app.include_router(car_router)
+app.include_router(agent_tools_router)
 
 
 
