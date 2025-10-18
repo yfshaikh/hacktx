@@ -1,21 +1,20 @@
 import Spline from '@splinetool/react-spline';
 import { useConversation } from '@elevenlabs/react';
 import { useState } from 'react';
+import { getSignedUrl } from '../../lib/api/elevenlabs';
 
 function Avatar() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log('[v0] ElevenLabs conversation connected');
       setIsConnecting(false);
     },
     onDisconnect: () => {
-      console.log('[v0] ElevenLabs conversation disconnected');
       setIsConnecting(false);
     },
     onError: (error) => {
-      console.error('[v0] ElevenLabs conversation error:', error);
+      console.error('Conversation error:', error);
       setIsConnecting(false);
     },
   });
@@ -27,16 +26,17 @@ function Avatar() {
       // Request microphone access
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Start conversation with a public agent
-      // Replace 'your-agent-id' with your actual ElevenLabs agent ID
+      // Get signed URL for authentication
+      const signedUrl = await getSignedUrl();
+
+      // Start conversation with signed URL
       await conversation.startSession({
-        agentId: "your-agent-id", // You'll need to replace this with your actual agent ID
-        connectionType: "webrtc",
+        signedUrl,
       });
     } catch (error) {
-      console.error('[v0] Failed to start conversation:', error);
       setIsConnecting(false);
-      alert('Failed to start conversation. Please check your microphone permissions and agent ID.');
+      console.error('Failed to start conversation:', error);
+      alert('Failed to start conversation. Please check your microphone permissions and server configuration.');
     }
   };
 
@@ -123,7 +123,7 @@ function Avatar() {
                   >
                     {isConnecting || conversation.status === 'connecting' ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-[var(--toyota-white)]/30 border-t-[var(--toyota-white)] rounded-full animate-spin" />
                         Connecting...
                       </>
                     ) : (
