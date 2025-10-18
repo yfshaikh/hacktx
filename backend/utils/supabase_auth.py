@@ -1,76 +1,65 @@
-from fastapi import HTTPException, Depends, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
-from typing import Optional, Dict, Any
-import logging
+from __future__ import annotations
 import os
+import logging
+from typing import Any, Dict, Optional
+
+from fastapi import HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
-load_dotenv()
+import jwt
+from jwt import InvalidTokenError, ExpiredSignatureError
 
-# Set up logging
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-# Supabase JWT configuration
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-if not SUPABASE_JWT_SECRET:
-    logger.error("❌ SUPABASE_JWT_SECRET environment variable is required")
-    raise ValueError("SUPABASE_JWT_SECRET environment variable is required")
+# ---- Config ----
+DEV_MODE: bool = os.getenv("DEV_MODE", "1") == "1"  # default ON for hackathon
+SUPABASE_JWT_SECRET: Optional[str] = os.getenv("SUPABASE_JWT_SECRET")
 
-JWT_ALGORITHM = "HS256"
-JWT_AUDIENCE = "authenticated"
+JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+# Some Supabase tokens include aud="authenticated"; make audience optional
+JWT_AUDIENCE: Optional[str] = os.getenv("JWT_AUDIENCE")  # e.g., "authenticated"
 
-# Set up HTTP Bearer token extraction
-security = HTTPBearer()
+# Don’t auto-error so we can handle missing headers ourselves
+security = HTTPBearer(auto_error=False)
 
-class CurrentUser:
-    """User info extracted from Supabase JWT token"""
-    def __init__(self, uid: str, email: str, phone: str = None, role: str = "authenticated", aud: str = "authenticated", user_role: str = "student", **kwargs):
-        self.uid = uid
-        self.sub = uid  # JWT standard field
-        self.email = email
-        self.phone = phone
-        self.role = role
-        self.aud = aud
-        self.raw_claims = kwargs
-        self.user_role = user_role
+# ---- Model ----
+class CurrentUser(BaseModel):
+    uid: str
+    email: str
+    phone: Optional[str] = None
+    role: str = "authenticated"
+    aud: Optional[str] = "authenticated"
+    user_role: str = "student"
+    raw_claims: Dict[str, Any] = {}
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"User({self.email}, role={self.user_role})"
 
+# ---- Verify helper ----
 def verify_supabase_jwt(token: str) -> Dict[str, Any]:
     """
-    Verify Supabase JWT token locally using the JWT secret
-    Returns the decoded payload if valid
+    Verify Supabase JWT token locally.
+    Audience is optional: we try with audience first, then without.
     """
+    if not SUPABASE_JWT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Server missing SUPABASE_JWT_SECRET",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # First attempt: with aud if provided
     try:
-        # Decode and verify the JWT token
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             SUPABASE_JWT_SECRET,
             algorithms=[JWT_ALGORITHM],
-            audience=JWT_AUDIENCE,
-            options={"verify_exp": True, "verify_aud": True}
+            audience=JWT_AUDIENCE if JWT_AUDIENCE else None,
+            options={"verify_exp": True, "verify_aud": bool(JWT_AUDIENCE)},
         )
-        
-        logger.debug(f"Successfully verified JWT for user: {payload.get('email', 'unknown')}")
-        
-        # Log detailed user information from JWT payload
-        user_info = {
-            'uid': payload.get('sub'),
-            'email': payload.get('email'),
-            'phone': payload.get('phone'),
-            'user_role': payload.get('user_role', 'student'),
-            'role': payload.get('role', payload.get('aud', 'authenticated')),
-            'aud': payload.get('aud'),
-            'exp': payload.get('exp'),
-            'iat': payload.get('iat')
-        }
-        logger.info(f"User login - JWT payload info: {user_info}")
-        
-        return payload
-        
     except ExpiredSignatureError:
         logger.warning("JWT token has expired")
         raise HTTPException(
@@ -79,7 +68,20 @@ def verify_supabase_jwt(token: str) -> Dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         )
     except InvalidTokenError as e:
-        logger.warning(f"Invalid JWT token: {e}")
+        # If audience was required and failed, try once more without aud
+        if JWT_AUDIENCE:
+            try:
+                return jwt.decode(
+                    token,
+                    SUPABASE_JWT_SECRET,
+                    algorithms=[JWT_ALGORITHM],
+                    options={"verify_exp": True, "verify_aud": False},
+                )
+            except Exception:
+                logger.warning(f"Invalid JWT token (after no-aud retry): {e}")
+        else:
+            logger.warning(f"Invalid JWT token: {e}")
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
@@ -93,40 +95,40 @@ def verify_supabase_jwt(token: str) -> Dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> CurrentUser:
+# ---- Dependency ----
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> CurrentUser:
     """
-    Dependency to get current authenticated user from Supabase JWT token
+    FastAPI dependency to get the authenticated user.
+    In DEV_MODE or when SUPABASE_JWT_SECRET is absent, returns a dummy user.
     """
-    try:
-        # Verify token
-        payload = verify_supabase_jwt(credentials.credentials)
-        
-        # Extract user info from JWT payload
-        # Remove keys that are explicitly passed to avoid conflicts
-        filtered_payload = {k: v for k, v in payload.items() 
-                          if k not in ['sub', 'email', 'phone', 'user_role', 'role', 'aud']}
-        
-        user = CurrentUser(
-            uid=payload.get('sub'),  # User ID
-            email=payload.get('email', ''),
-            phone=payload.get('phone'),
-            user_role=payload.get('user_role', "student"),  # Custom claim for role
-            role=payload.get('role', payload.get('aud', 'authenticated')),  # Role or audience
-            aud=payload.get('aud', 'authenticated'),
-            **filtered_payload  # Include remaining claims without conflicts
-        )
-        
-        logger.info(f"Authenticated user: {user}")
-        return user
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Error extracting user from token: {e}")
+    # Dev bypass: no header needed
+    if DEV_MODE or not SUPABASE_JWT_SECRET:
+        return CurrentUser(uid="dev-user", email="dev@example.com")
+
+    if credentials is None or not credentials.scheme.lower() == "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Missing bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    payload = verify_supabase_jwt(credentials.credentials)
+
+    filtered_payload = {
+        k: v for k, v in payload.items()
+        if k not in {"sub", "email", "phone", "user_role", "role", "aud"}
+    }
+
+    user = CurrentUser(
+        uid=str(payload.get("sub")),
+        email=str(payload.get("email", "")),
+        phone=payload.get("phone"),
+        user_role=str(payload.get("user_role", "student")),
+        role=str(payload.get("role", payload.get("aud", "authenticated"))),
+        aud=payload.get("aud", "authenticated"),
+        raw_claims=filtered_payload,
+    )
+    logger.info(f"Authenticated user: {user}")
+    return user

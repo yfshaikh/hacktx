@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments (DO ignore these)
+.venv/
+venv/
+env/
+
+# OS/IDE noise
+.DS_Store
+*.log
+.vscode/
+.idea/

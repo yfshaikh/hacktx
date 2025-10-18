@@ -1,72 +1,121 @@
-from fastapi import FastAPI, HTTPException
+# backend/main.py
+from dotenv import load_dotenv
+load_dotenv()  # load env before any route/auth imports
+
+from fastapi import FastAPI, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import os
-# from routes.chat_routes import chat_router
-from routes.eleven_routes import eleven_router
+
+# Supabase (dev-safe; returns None if not configured in DEV_MODE)
 from utils.initialize_supabase import get_supabase_client
 
-# Configure logging
+# Routers
+from routes.eleven_routes import eleven_router
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("toyota-finance-coach")
 
-# Initialize FastAPI app
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"],  
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Only necessary methods
-    allow_headers=[
-        "Content-Type", 
-        "Authorization", 
-        "Accept", 
-        "Origin", 
-        "User-Agent",
-        "X-Requested-With"
-    ],  # Only necessary headers
+# -----------------------------------------------------------------------------
+# App
+# -----------------------------------------------------------------------------
+app = FastAPI(
+    title="Toyota Finance Coach API",
+    version="1.0.0",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
 )
 
-# Initialize Supabase client
+# -----------------------------------------------------------------------------
+# CORS
+# -----------------------------------------------------------------------------
+allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in allowed],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "User-Agent", "X-Requested-With"],
+)
+
+# -----------------------------------------------------------------------------
+# Supabase (optional in dev)
+# -----------------------------------------------------------------------------
 try:
     supabase = get_supabase_client()
+    app.state.supabase = supabase  # available via request.app.state.supabase
     logger.info("✅ Supabase client initialized successfully")
 except Exception as e:
-    logger.error(f"❌ Failed to initialize Supabase client: {e}")
-    raise
+    logger.warning(f"⚠️  Supabase not initialized (dev mode?): {e}")
+    app.state.supabase = None
 
-# Include routes
-app.include_router(eleven_router)
+# -----------------------------------------------------------------------------
+# Routers
+# -----------------------------------------------------------------------------
+api = APIRouter(prefix="/api")
 
+# ElevenLabs routes under /api/eleven
+api.include_router(eleven_router, tags=["eleven"])
 
+# Debug router (define BEFORE mounting `api`)
+debug = APIRouter(prefix="/debug")
 
-# Basic health check
+@debug.get("/env")
+def debug_env():
+    def mask(v: str | None):
+        if not v:
+            return None
+        if len(v) <= 8:
+            return "***"
+        return v[:4] + "…" + v[-4:]
+    return {
+        "ALLOWED_ORIGINS": os.getenv("ALLOWED_ORIGINS"),
+        "SUPABASE_URL": os.getenv("SUPABASE_URL"),
+        "SUPABASE_KEY": mask(os.getenv("SUPABASE_KEY")),
+        "SUPABASE_JWT_SECRET": mask(os.getenv("SUPABASE_JWT_SECRET")),
+        "ELEVEN_API_KEY": mask(os.getenv("ELEVEN_API_KEY")),
+        "ELEVEN_VOICE_ID": mask(os.getenv("ELEVEN_VOICE_ID")),
+    }
+
+# mount debug under /api
+api.include_router(debug, tags=["debug"])
+
+# finally mount the api router on the app
+app.include_router(api)
+
+# -----------------------------------------------------------------------------
+# Health
+# -----------------------------------------------------------------------------
 @app.get("/")
 async def root():
-    """Health check endpoint"""
     return {
-        "message": "FastAPI Admin API is running",
+        "message": "FastAPI is running",
         "status": "healthy",
-        "database": "Supabase",
+        "supabase": bool(app.state.supabase),
         "version": "1.0.0",
     }
 
-# Error handlers
+# -----------------------------------------------------------------------------
+# Error handling
+# -----------------------------------------------------------------------------
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    """Custom error handling"""
+async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "error": exc.detail,
             "status_code": exc.status_code,
-            "path": str(request.url.path)
-        }
+            "path": request.url.path,
+        },
     )
 
+# -----------------------------------------------------------------------------
+# Dev entrypoint
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
