@@ -17,8 +17,8 @@ function App() {
           <Routes>
             {/* Routes without sidebar */}
             <Route element={<SimpleLayout />}>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<AuthPage />} />
+              {/* <Route path="/" element={<LandingPage />} /> */}
+              <Route path="/" element={<AuthPage />} />
             </Route>
             
             {/* Routes with sidebar */}

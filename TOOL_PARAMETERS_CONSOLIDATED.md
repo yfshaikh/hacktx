@@ -427,6 +427,118 @@ If user hasn't linked their Capital One account:
 
 ---
 
+## Tool 5: `transfer_to_number`
+
+### Description
+Transfer the user to a live service representative when they're ready to move forward with a financing option or need human assistance to finalize details.
+
+### Parameters Schema
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "transfer_number": {
+      "type": "string",
+      "description": "Phone number to transfer to (must match configured numbers)",
+      "example": "+1234567890"
+    },
+    "client_message": {
+      "type": "string",
+      "description": "Message read to the client while waiting for transfer",
+      "example": "Great! Please hold while I connect you with a service representative."
+    },
+    "agent_message": {
+      "type": "string",
+      "description": "Message for the human operator receiving the call",
+      "example": "Customer is interested in moving forward with a lease option. They've reviewed financing and are ready to confirm details."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Optional: Reason for transfer (e.g., 'lease financing confirmation', 'deal finalization', 'loan inquiry')",
+      "example": "Camry loan confirmation"
+    }
+  },
+  "required": ["transfer_number", "client_message", "agent_message"]
+}
+```
+
+### Return Value
+Initiates a transfer to a service representative. Returns confirmation message for conversation.
+
+### Example Use Cases
+
+#### User Likes Financing Option
+```
+User: "I like the lease option you showed me"
+AI: "Great choice! Would you like me to connect you with a service rep who can confirm all the details?"
+User: "Yes"
+Tool Call: 
+  transfer_to_number(
+    transfer_number="+1234567890",
+    client_message="Great! Please hold while I connect you with a service representative who can help finalize your lease.",
+    agent_message="Customer is interested in moving forward with a lease option. They've reviewed financing and are ready to confirm details.",
+    reason="lease financing confirmation"
+  )
+```
+
+#### User Wants to Finalize Deal
+```
+User: "Let's do this, I want to buy the RAV4"
+Tool Call:
+  transfer_to_number(
+    transfer_number="+1234567890",
+    client_message="Connecting you with our sales team to help complete your RAV4 purchase. One moment please.",
+    agent_message="Customer wants to purchase a RAV4. Ready to finalize the deal.",
+    reason="RAV4 purchase finalization"
+  )
+```
+
+#### User Asks to Speak with Someone
+```
+User: "Can I talk to someone about this?"
+Tool Call:
+  transfer_to_number(
+    transfer_number="+1234567890",
+    client_message="Connecting you now with a specialist who can help. Please hold.",
+    agent_message="Customer requested to speak with a representative. General inquiry.",
+    reason="general inquiry"
+  )
+```
+
+### What the Tool Does
+1. Confirms user's intent to be transferred
+2. Dials the specified transfer_number (must match configured service numbers)
+3. Plays the client_message to the user while connecting
+4. Delivers the agent_message to the service representative
+5. Provides smooth transition from AI to human assistance with full context
+
+### Important Notes
+- **Always ask for confirmation** before transferring (unless explicitly requested)
+- **Only use when user shows genuine interest** in moving forward
+- Don't push transfers if they're still exploring options
+- The transfer_number must be pre-configured in the system
+- The agent_message should provide clear context for seamless handoff
+- The client_message should be professional and reassuring
+- This is typically the final step after financing options are discussed
+- Users can decline and continue chatting with the AI
+
+### Message Guidelines
+
+**client_message** (What the customer hears):
+- Keep it professional and reassuring
+- Mention what type of specialist they're being connected to
+- Use phrases like "Please hold", "One moment", or "Connecting you now"
+- Keep it brief - this is played while they wait
+
+**agent_message** (What the service rep receives):
+- Provide clear context about what the customer needs
+- Mention any specific vehicles, financing options, or decisions they've made
+- Include relevant details (e.g., "lease vs buy preference", "RAV4 with AWD")
+- Be concise but informative so the rep can pick up seamlessly
+
+---
+
 ## ElevenLabs Client Tools Configuration
 
 ### Complete JavaScript Configuration
@@ -512,6 +624,32 @@ const clientTools = {
         required: [],
       },
     },
+    {
+      name: 'transfer_to_number',
+      description: 'Transfer the user to a live service representative when they want to finalize a deal or need human assistance.',
+      parameters: {
+        type: 'object',
+        properties: {
+          transfer_number: {
+            type: 'string',
+            description: 'Phone number to transfer to (must match configured numbers)',
+          },
+          client_message: {
+            type: 'string',
+            description: 'Message read to the client while waiting for transfer',
+          },
+          agent_message: {
+            type: 'string',
+            description: 'Message for the human operator receiving the call',
+          },
+          reason: {
+            type: 'string',
+            description: 'Optional: Reason for transfer (e.g., "lease financing confirmation", "deal finalization")',
+          },
+        },
+        required: ['transfer_number', 'client_message', 'agent_message'],
+      },
+    },
   ],
   handler: async (toolName, parameters) => {
     // Tool implementation - See: frontend/src/pages/Avatar/Avatar.tsx
@@ -567,6 +705,7 @@ try {
 - **Loan Tool**: Fast (~1-2 seconds) - pure calculation
 - **Trim Tool**: Slower (~5-10 seconds) - does web searches to verify features
 - **Bank Tool**: Fast (~1-2 seconds) - cached data with 15-minute TTL
+- **Transfer Tool**: Instant - initiates call transfer immediately
 
 ---
 
@@ -638,6 +777,11 @@ Example: If user says "How much is a RAV4 per month?" without mentioning down pa
 3. The Nessie API must be accessible (demo mode available if unavailable)
 4. Environment variable `NESSIE_API_KEY` should be set (optional for demo mode)
 
+### For Transfer Tool
+1. ElevenLabs conversation must be active (voice session in progress)
+2. Service representative phone number/endpoint must be configured
+3. Transfer capability must be enabled in ElevenLabs agent settings
+
 ### For All Tools
 - Backend server must be running on `http://localhost:8000`
 - Frontend must be running on `http://localhost:5173`
@@ -653,5 +797,5 @@ Example: If user says "How much is a RAV4 per month?" without mentioning down pa
 
 ---
 
-**Remember**: All tools work together to provide a comprehensive car buying experience with real data, accurate calculations, and personalized financial insights!
+**Remember**: All 5 tools work together to provide a comprehensive car buying experience with real data, accurate calculations, personalized financial insights, and seamless handoff to human representatives when users are ready to finalize their purchase!
 

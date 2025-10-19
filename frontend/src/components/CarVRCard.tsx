@@ -305,7 +305,7 @@ export function CarVRCard({ car, isOpen, onClose, position = 0 }: CarVRCardProps
                   <Separator />
 
                   {/* Match Analysis */}
-                  <div className="space-y-3">
+                  {/* <div className="space-y-3">
                     <h4 className="font-semibold text-[var(--foreground)]">Match Analysis</h4>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3">
@@ -359,7 +359,7 @@ export function CarVRCard({ car, isOpen, onClose, position = 0 }: CarVRCardProps
                         </Badge>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Actions */}
                   <div className="space-y-3 pt-4">

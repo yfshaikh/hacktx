@@ -15,7 +15,7 @@ function Avatar() {
   const [isCarSidebarOpen, setIsCarSidebarOpen] = useState(false);
   const avatarToAnimate = useRef<any>(null);
   const ballsToAnimate = useRef<any>(null);
-  const SPLINE_URL="https://prod.spline.design/uFrHM1KSZn46gTnk/scene.splinecode"
+  const SPLINE_URL="https://prod.spline.design/dupW-aTgr2-vGkNg/scene.splinecode"
   
   // Get auth context for user profile
   const { user } = useAuth();
@@ -326,7 +326,7 @@ function Avatar() {
         // Avatar is speaking - trigger talking animation
         console.log('Starting talking animation');
         avatarToAnimate.current.emitEvent('mouseDown');
-        ballsToAnimate.current.emitEvent('mouseDown');
+        // ballsToAnimate.current.emitEvent('mouseDown');
       } else {
         // Avatar stopped talking and is listening - use mouseHover for listening state
         console.log('Stopping talking animation, switching to listening');
