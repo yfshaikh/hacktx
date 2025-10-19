@@ -61,6 +61,16 @@ api = APIRouter(prefix="/api")
 # ElevenLabs routes under /api/eleven
 api.include_router(eleven_router, tags=["eleven"])
 
+# ML routes under /api/ml
+from routes.ml_routes import ml_router
+api.include_router(ml_router, tags=["ml"])
+
+from routes.voice_routes import voice_router
+api.include_router(voice_router, tags=["voice"])
+
+from routes.plan_routes import plan_router
+api.include_router(plan_router, tags=["plan"])
+
 # Debug router (define BEFORE mounting `api`)
 debug = APIRouter(prefix="/debug")
 
