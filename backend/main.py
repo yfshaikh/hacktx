@@ -71,6 +71,19 @@ api.include_router(voice_router, tags=["voice"])
 from routes.plan_routes import plan_router
 api.include_router(plan_router, tags=["plan"])
 
+from routes.calc_routes import calc_router
+api.include_router(calc_router, tags=["calc"])
+
+from routes.advice_routes import advice_router
+api.include_router(advice_router, tags=["advice"])
+
+from routes.inventory_routes import inventory_router
+api.include_router(inventory_router, tags=["inventory"])
+
+from routes.coach_routes import coach_router
+api.include_router(coach_router, tags=["coach"])
+
+
 # Debug router (define BEFORE mounting `api`)
 debug = APIRouter(prefix="/debug")
 
