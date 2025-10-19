@@ -268,17 +268,29 @@ function Avatar() {
 
   // Effect to handle conversation status changes for more responsive animations
   useEffect(() => {
+    // Add null checks to prevent errors
+    if (!avatarToAnimate.current || !ballsToAnimate.current) return;
+
     if (conversation.status === 'connected') {
       if (conversation.isSpeaking) {
+        // Avatar is speaking - trigger talking animation
+        console.log('Starting talking animation');
         avatarToAnimate.current.emitEvent('mouseDown');
+        ballsToAnimate.current.emitEvent('mouseDown');
       } else {
-        avatarToAnimate.current.emitEvent('');
-        ballsToAnimate.current.emitEvent('mouseUp');
+        // Avatar stopped talking and is listening - use mouseHover for listening state
+        console.log('Stopping talking animation, switching to listening');
+        avatarToAnimate.current.emitEvent('mouseHover');
+        ballsToAnimate.current.emitEvent('mouseHover');
       }
     } else if (conversation.status === 'connecting') {
-      // triggerAnimation('keyDown', 'Avatar'); // Thinking/connecting
+      // Connecting state
+      console.log('Connecting...');
     } else {
-      // triggerAnimation('start', 'Avatar'); // Idle
+      // Idle state
+      console.log('Idle state');
+      avatarToAnimate.current.emitEvent('start');
+      ballsToAnimate.current.emitEvent('start');
     }
   }, [conversation.status, conversation.isSpeaking]);
 
