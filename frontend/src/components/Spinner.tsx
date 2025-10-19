@@ -5,6 +5,7 @@ interface CarSpinnerProps {
   modelTag: string;
   modelGrade: string;
   colorCodes: string;
+  year?: string; // Vehicle year for image URL
   imageIndexOverride?: number;
   imageCountOverride?: number;
   card?: boolean;
@@ -17,6 +18,7 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
   modelTag,
   modelGrade,
   colorCodes,
+  year: yearProp,
   imageIndexOverride,
   imageCountOverride,
   card,
@@ -29,7 +31,7 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
   const [randomModelGrade, setRandomModelGrade] = useState("");
   const [randomModelTag, setRandomModelTag] = useState("");
   const [imageCount, setImageCount] = useState(36);
-  const [year, setYear] = useState("2025");
+  const [year, setYear] = useState(yearProp || "2024"); // Use prop or default to 2024
   const [modelName, setModelName] = useState("");
 
   useEffect(() => {
@@ -61,6 +63,13 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
   }, [imageIndexOverride, imageCount]);
 
 
+  // Update year when prop changes
+  useEffect(() => {
+    if (yearProp) {
+      setYear(yearProp);
+    }
+  }, [yearProp]);
+
   useEffect(() => {
     if (model.split(" ")[1]?.toLowerCase() === "highlander") {
       console.log("highlander: ", model);
@@ -75,13 +84,11 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
     else {
       setModelName(model.split(" ")[0]?.toLowerCase() || "");
     }
-
-    if (model.split(" ")[0]?.toLowerCase() === "venza") {
-      setYear("2024");
-    }
   }, [model]);
 
   useEffect(() => {
+    console.log("🎨 Spinner Props:", { colorCodes, modelGrade, modelTag, model });
+    
     const colorCodeArray = colorCodes
       .split(",")
       .map((color) => color.trim().toLowerCase());
@@ -92,18 +99,39 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
     if (modelTag) {
       modelTagArray = modelTag.split(",").map((tag) => tag.trim());
     }
+    
+    console.log("📊 Arrays:", { 
+      colorCodeArray, 
+      modelGradeArray, 
+      modelTagArray,
+      lengths: {
+        colors: colorCodeArray.length,
+        grades: modelGradeArray.length,
+        tags: modelTagArray.length
+      }
+    });
+    
     if (colorIndex === undefined) {
       const randomIndex = Math.floor(Math.random() * colorCodeArray.length);
       setRandomColor(colorCodeArray[randomIndex] || "");
       setRandomModelGrade(modelGradeArray[randomIndex] || "");
       setRandomModelTag(modelTagArray[randomIndex] || "");
+      console.log("🎲 Random selection (index " + randomIndex + "):", {
+        color: colorCodeArray[randomIndex],
+        grade: modelGradeArray[randomIndex],
+        tag: modelTagArray[randomIndex]
+      });
     } else {
       setRandomColor(colorCodeArray[colorIndex] || "");
       setRandomModelGrade(modelGradeArray[colorIndex] || "");
       setRandomModelTag(modelTagArray[colorIndex] || "");
-      console.log("colorIndex: ", colorIndex);
+      console.log("🎯 Specific index " + colorIndex + ":", {
+        color: colorCodeArray[colorIndex],
+        grade: modelGradeArray[colorIndex],
+        tag: modelTagArray[colorIndex]
+      });
     }
-  }, [colorCodes, modelGrade, modelTag, colorIndex]);
+  }, [colorCodes, modelGrade, modelTag, colorIndex, model]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     console.log("handleMouseMove");
@@ -149,8 +177,26 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
         </div>
       ) : (
         <img
-          src={`https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/max/${year}/${modelName}/${randomModelGrade}/${randomModelTag}/${randomColor}/${imageCount}/${currentImageIndex}.png?fmt=webp-alpha&wid=930&qlt=90`}
+          src={(() => {
+            const url = `https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/max/${year}/${modelName}/${randomModelGrade}/${randomModelTag}/${randomColor}/${imageCount}/${currentImageIndex}.png?fmt=webp-alpha&wid=930&qlt=90`;
+            console.log("🖼️ Image URL:", url);
+            console.log("🔧 URL Components:", {
+              year,
+              modelName,
+              randomModelGrade,
+              randomModelTag,
+              randomColor,
+              imageCount,
+              currentImageIndex
+            });
+            return url;
+          })()}
           alt="Spinning Car"
+          onLoad={() => console.log("✅ Image loaded successfully")}
+          onError={(e) => {
+            console.error("❌ Image failed to load");
+            console.error("Failed URL:", (e.target as HTMLImageElement).src);
+          }}
           className={`${card ? "h-full w-full -translate-x-7" : "w-full"} object-cover ${!noPadding && card ? "py-12" : "py-5"}`}
         />
       )}

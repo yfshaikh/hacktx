@@ -65,10 +65,22 @@ export function CarSidebar({ car, isOpen, onClose }: CarSidebarProps) {
               <div className="space-y-6 p-6 pb-4">
                 {/* Car Image */}
                 <div className="relative h-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
+                  {(() => {
+                    console.log("🚗 CarSidebar Vehicle Data:", {
+                      model: car.vehicle.model,
+                      colorCodes: car.vehicle.colorCodes,
+                      modelTag: car.vehicle.modelTag,
+                      modelGrade: car.vehicle.modelGrade,
+                      imageCount: car.vehicle.imageCount,
+                      has3D: car.vehicle.has3D
+                    });
+                    return null;
+                  })()}
                   <Spinner
                     colorCodes={car.vehicle.colorCodes ?? ""}
                     colorIndex={colorSelected}
                     model={car.vehicle.model ?? ""}
+                    year={car.vehicle.year ?? "2024"}
                     modelTag={car.vehicle.modelTag ?? ""}
                     modelGrade={car.vehicle.modelGrade ?? ""}
                     imageCountOverride={car.vehicle.imageCount}

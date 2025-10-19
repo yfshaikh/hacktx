@@ -15,6 +15,10 @@ class SearchCarRequest(BaseModel):
     make: str
     model: str
     year: Optional[str] = None
+    fuelType: Optional[str] = None  # e.g., "Regular", "Gasoline or E85", "Regular Gas and Electricity"
+    drive: Optional[str] = None  # e.g., "Front-Wheel Drive", "All-Wheel Drive", "4-Wheel Drive"
+    minMpg: Optional[int] = None  # Minimum combined MPG
+    maxPrice: Optional[int] = None  # Maximum MSRP
 
 
 @router.post("/search-car")
@@ -32,12 +36,29 @@ async def search_car_tool(request: SearchCarRequest):
         # Build query
         query = supabase.table('vehicles').select('*')
         
-        # Case-insensitive search
+        # Case-insensitive search with partial matching
         query = query.ilike('make', request.make)
-        query = query.ilike('model', request.model)
+        query = query.ilike('model', f'%{request.model}%')  # Partial match for model
         
+        # Optional filters
         if request.year:
             query = query.eq('year', request.year)
+        else:
+            # Default to 2024 for best data (pricing + images)
+            query = query.eq('year', '2024')
+        
+        if request.fuelType:
+            query = query.ilike('fuelType', f'%{request.fuelType}%')
+        
+        if request.drive:
+            query = query.ilike('drive', f'%{request.drive}%')
+        
+        if request.minMpg:
+            query = query.gte('combinedMpgForFuelType1', request.minMpg)
+        
+        if request.maxPrice:
+            query = query.lte('msrp', request.maxPrice)
+            query = query.not_.is_('msrp', 'null')  # Only return vehicles with pricing if maxPrice is specified
         
         # Get the first match, ordered by year descending (newest first)
         result = query.order('year', desc=True).limit(1).execute()
@@ -61,12 +82,12 @@ async def search_car_tool(request: SearchCarRequest):
             "msrp": vehicle.get("msrp"),
             "fuelType": vehicle.get("fuelType") or vehicle.get("Fuel Type"),
             "transmission": vehicle.get("transmission"),
-            "colorCodes": vehicle.get("color_codes"),
-            "colorHexCodes": vehicle.get("color_hex_codes"),
-            "colorNames": vehicle.get("color_names"),
-            "modelTag": vehicle.get("model_tag"),
-            "modelGrade": vehicle.get("model_grade"),
-            "imageCount": vehicle.get("image_count"),
+            "colorCodes": vehicle.get("colorCodes") or vehicle.get("color_codes"),
+            "colorHexCodes": vehicle.get("colorHexCodes") or vehicle.get("color_hex_codes"),
+            "colorNames": vehicle.get("colorNames") or vehicle.get("color_names"),
+            "modelTag": vehicle.get("modelTag") or vehicle.get("model_tag"),
+            "modelGrade": vehicle.get("modelGrade") or vehicle.get("model_grade"),
+            "imageCount": vehicle.get("imageCount") or vehicle.get("image_count") or 36,
             "url": vehicle.get("url"),
             # Additional fields
             "cylinders": vehicle.get("cylinders"),

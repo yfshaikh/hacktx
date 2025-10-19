@@ -32,13 +32,52 @@ function Avatar() {
     }
   };
 
-  // Create client tool for displaying car information
-  const displayCarInfo = (parameters: any) => {
-    console.log('displayCarInfo called with parameters:', parameters);
+  // Create client tool for searching and displaying car information
+  const displayCarInfo = async (parameters: any) => {
+    console.log('search_car called with parameters:', parameters);
     
     try {
-      // Parse the car data from the parameters
-      const carInfo = JSON.parse(parameters.carData);
+      // ElevenLabs may nest parameters, so check both structures
+      const params = parameters.car_details || parameters;
+      
+      // Extract search parameters (all optional except make and model)
+      const { make, model, year, fuelType, drive, minMpg, maxPrice } = params;
+      
+      if (!make || !model) {
+        console.error('Missing make or model parameter');
+        return "Error: Please provide both make and model.";
+      }
+      
+      // Build request body with all parameters
+      const requestBody: any = { make, model };
+      if (year) requestBody.year = year;
+      if (fuelType) requestBody.fuelType = fuelType;
+      if (drive) requestBody.drive = drive;
+      if (minMpg) requestBody.minMpg = parseInt(minMpg);
+      if (maxPrice) requestBody.maxPrice = parseInt(maxPrice);
+      
+      // Call the backend API to search for the car
+      const apiUrl = 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/agent-tools/search-car`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success || !result.carData) {
+        return result.error || "Vehicle not found.";
+      }
+      
+      // Parse the car data from the API response
+      const carInfo = JSON.parse(result.carData);
       
       // Create a VehicleScore object from the provided data
       const vehicleScore: VehicleScore = {
@@ -102,18 +141,13 @@ function Avatar() {
       // Return success message for the conversation context
       return 'Car information displayed successfully';
     } catch (error) {
-      console.error('Error parsing car data:', error);
-      return 'Failed to display car information';
+      console.error('Error searching for car:', error);
+      return `Failed to search for vehicle: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   };
 
-  // Register client tools properly according to ElevenLabs documentation
-  const clientTools = {
-    displayCarInfo: displayCarInfo
-  };
-
   const conversation = useConversation({
-    clientTools: clientTools,
+    clientTools: { search_car: displayCarInfo },
     onConnect: () => {
       setIsConnecting(false);
       // Trigger listening animation when connected
