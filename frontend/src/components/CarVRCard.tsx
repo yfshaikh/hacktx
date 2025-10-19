@@ -30,6 +30,27 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
 
   if (!car) return null;
 
+  // Check if car has images
+  const hasImages = car.vehicle.imageCount && car.vehicle.imageCount > 0;
+  
+  // Get valid colors (only those with images)
+  const getValidColors = () => {
+    if (!car.vehicle.colorCodes || !hasImages) return [];
+    const colorCodesArray = car.vehicle.colorCodes.split(",");
+    const colorHexArray = car.vehicle.colorHexCodes?.split(",") || [];
+    
+    // Filter colors that have corresponding hex codes and are within image count range
+    return colorCodesArray
+      .map((code, index) => ({
+        code: code.trim(),
+        hex: colorHexArray[index]?.trim(),
+        index
+      }))
+      .filter(color => color.hex); // Only include colors with hex codes
+  };
+  
+  const validColors = getValidColors();
+
   return (
     <AnimatePresence mode="wait">
       {isOpen && (
@@ -86,26 +107,28 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
             {/* Compact View */}
             {!isExpanded && (
               <div className="p-4 space-y-4">
-                {/* Car Image */}
-                <div className="relative h-40 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
-                  <Spinner
-                    colorCodes={car.vehicle.colorCodes ?? ""}
-                    colorIndex={colorSelected}
-                    model={car.vehicle.model ?? ""}
-                    year={car.vehicle.year ?? "2024"}
-                    modelTag={car.vehicle.modelTag ?? ""}
-                    modelGrade={car.vehicle.modelGrade ?? ""}
-                    imageCountOverride={car.vehicle.imageCount}
-                    card={false}
-                  />
-                  
-                  {/* Match Badge */}
-                  <div className="absolute left-2 top-2">
-                    <Badge className="bg-[var(--toyota-red)] text-[var(--toyota-white)] px-2 py-1 text-xs">
-                      {Math.round(car.totalScore)}% Match
-                    </Badge>
+                {/* Car Image - Only show if images exist */}
+                {hasImages && (
+                  <div className="relative h-40 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
+                    <Spinner
+                      colorCodes={car.vehicle.colorCodes ?? ""}
+                      colorIndex={colorSelected}
+                      model={car.vehicle.model ?? ""}
+                      year={car.vehicle.year ?? "2024"}
+                      modelTag={car.vehicle.modelTag ?? ""}
+                      modelGrade={car.vehicle.modelGrade ?? ""}
+                      imageCountOverride={car.vehicle.imageCount}
+                      card={false}
+                    />
+                    
+                    {/* Match Badge */}
+                    <div className="absolute left-2 top-2">
+                      <Badge className="bg-[var(--toyota-red)] text-[var(--toyota-white)] px-2 py-1 text-xs">
+                        {Math.round(car.totalScore)}% Match
+                      </Badge>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Car Info */}
                 <div className="space-y-1">
@@ -161,26 +184,28 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                 }}
               >
                 <div className="space-y-6 p-6">
-                  {/* Car Image */}
-                  <div className="relative h-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
-                    <Spinner
-                      colorCodes={car.vehicle.colorCodes ?? ""}
-                      colorIndex={colorSelected}
-                      model={car.vehicle.model ?? ""}
-                      year={car.vehicle.year ?? "2024"}
-                      modelTag={car.vehicle.modelTag ?? ""}
-                      modelGrade={car.vehicle.modelGrade ?? ""}
-                      imageCountOverride={car.vehicle.imageCount}
-                      card={false}
-                    />
-                    
-                    {/* Match Badge */}
-                    <div className="absolute left-3 top-3">
-                      <Badge className="bg-[var(--toyota-red)] text-[var(--toyota-white)] px-3 py-1">
-                        {Math.round(car.totalScore)}% Match
-                      </Badge>
+                  {/* Car Image - Only show if images exist */}
+                  {hasImages && (
+                    <div className="relative h-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
+                      <Spinner
+                        colorCodes={car.vehicle.colorCodes ?? ""}
+                        colorIndex={colorSelected}
+                        model={car.vehicle.model ?? ""}
+                        year={car.vehicle.year ?? "2024"}
+                        modelTag={car.vehicle.modelTag ?? ""}
+                        modelGrade={car.vehicle.modelGrade ?? ""}
+                        imageCountOverride={car.vehicle.imageCount}
+                        card={false}
+                      />
+                      
+                      {/* Match Badge */}
+                      <div className="absolute left-3 top-3">
+                        <Badge className="bg-[var(--toyota-red)] text-[var(--toyota-white)] px-3 py-1">
+                          {Math.round(car.totalScore)}% Match
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Car Info */}
                   <div className="space-y-2">
@@ -309,57 +334,52 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                     </>
                   )}
 
-                  <Separator />
+                  {/* Colors - Only show if there are valid colors */}
+                  {validColors.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-[var(--foreground)]">Available Colors</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {validColors.map((color) => {
+                            const isGradient = color.hex.startsWith("(");
+                            const gradientColors = isGradient
+                              ? color.hex.replace("(", "").replace(")", "").split(" ").map((code) => code.trim())
+                              : [];
 
-                  {/* Colors */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-[var(--foreground)]">Available Colors</h4>
-                    <div className="flex flex-wrap gap-3">
-                      {car.vehicle.colorCodes
-                        ?.split(",")
-                        .map((color, index) => {
-                          const colorHexCodes = car.vehicle.colorHexCodes?.split(",");
-                          const colorHex = colorHexCodes ? colorHexCodes[index]?.trim() : null;
-
-                          if (!colorHex) return null;
-
-                          const isGradient = colorHex.startsWith("(");
-                          const gradientColors = isGradient
-                            ? colorHex.replace("(", "").replace(")", "").split(" ").map((code) => code.trim())
-                            : [];
-
-                          return isGradient ? (
-                            <div
-                              key={color + index}
-                              className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
-                                colorSelected === index 
-                                  ? 'border-[var(--toyota-red)] scale-110' 
-                                  : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
-                              }`}
-                              onClick={() => setColorSelected(index)}
-                              style={{
-                                background: `linear-gradient(-45deg, #${gradientColors[0]} 50%, #${gradientColors[1]} 50%)`,
-                              }}
-                            />
-                          ) : (
-                            <div
-                              key={color + index}
-                              className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
-                                colorSelected === index 
-                                  ? 'border-[var(--toyota-red)] scale-110' 
-                                  : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
-                              }`}
-                              onClick={() => setColorSelected(index)}
-                              style={{
-                                backgroundColor: `#${colorHex}`,
-                              }}
-                            />
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  <Separator />
+                            return isGradient ? (
+                              <div
+                                key={color.code + color.index}
+                                className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
+                                  colorSelected === color.index 
+                                    ? 'border-[var(--toyota-red)] scale-110' 
+                                    : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
+                                }`}
+                                onClick={() => setColorSelected(color.index)}
+                                style={{
+                                  background: `linear-gradient(-45deg, #${gradientColors[0]} 50%, #${gradientColors[1]} 50%)`,
+                                }}
+                              />
+                            ) : (
+                              <div
+                                key={color.code + color.index}
+                                className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
+                                  colorSelected === color.index 
+                                    ? 'border-[var(--toyota-red)] scale-110' 
+                                    : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
+                                }`}
+                                onClick={() => setColorSelected(color.index)}
+                                style={{
+                                  backgroundColor: `#${color.hex}`,
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <Separator />
+                    </>
+                  )}
 
                   {/* Key Features */}
                   <div className="space-y-3">
@@ -397,7 +417,7 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                             </div>
                           </div>
                         </div>
-                        <Badge variant="outline" className="border-[var(--border)]">
+                        <Badge variant="outline" className="border-[var(--border)] text-[var(--foreground)]">
                           {Math.round(car.factors.priceCompatibility)}%
                         </Badge>
                       </div>
@@ -414,7 +434,7 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                             </div>
                           </div>
                         </div>
-                        <Badge variant="outline" className="border-[var(--border)]">
+                        <Badge variant="outline" className="border-[var(--border)] text-[var(--foreground)]">
                           {Math.round(car.factors.featureAlignment)}%
                         </Badge>
                       </div>
@@ -444,7 +464,7 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                     {car.vehicle.url && (
                       <Button 
                         variant="outline" 
-                        className="w-full border-[var(--border)] hover:bg-[var(--muted)]"
+                        className="w-full border-[var(--border)] hover:bg-[var(--muted)] text-[var(--foreground)]"
                         onClick={() => window.open(car.vehicle.url, '_blank')}
                       >
                         View Full Details

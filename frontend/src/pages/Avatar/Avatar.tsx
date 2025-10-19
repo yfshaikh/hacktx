@@ -9,28 +9,20 @@ function Avatar() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [carData, setCarData] = useState<VehicleScore | null>(null);
   const [isCarSidebarOpen, setIsCarSidebarOpen] = useState(false);
-  const splineRef = useRef<any>(null);
+  const avatarToAnimate = useRef<any>(null);
+  const ballsToAnimate = useRef<any>(null);
+  const SPLINE_URL="https://prod.spline.design/uFrHM1KSZn46gTnk/scene.splinecode"
 
-  function onLoad(splineApp: any) {
-    splineRef.current = splineApp;
-    console.log('Spline app loaded:', splineApp);
+  function onLoad(spline: any) {
+    const avatarObj = spline.findObjectByName('Avatar');
+    const ballsObj = spline.findObjectByName('Balls');
+    console.log(spline)
+    // save the object in a ref for later use
+    avatarToAnimate.current = avatarObj;
+    ballsToAnimate.current = ballsObj;
     
     // Trigger idle animation on load (if you have an object named 'Avatar' with 'start' event)
-    triggerAnimation('start', 'Avatar');
   }
-
-  // Function to trigger Spline animations using emitEvent
-  const triggerAnimation = (eventType: string, objectName: string) => {
-    if (splineRef.current) {
-      try {
-        // Use Spline's emitEvent to trigger animations
-        splineRef.current.emitEvent(eventType, objectName);
-        console.log(`Triggered ${eventType} event on object: ${objectName}`);
-      } catch (error) {
-        console.error(`Failed to trigger ${eventType} on ${objectName}:`, error);
-      }
-    }
-  };
 
   // Create client tool for searching and displaying car information
   const displayCarInfo = async (parameters: any) => {
@@ -151,18 +143,18 @@ function Avatar() {
     onConnect: () => {
       setIsConnecting(false);
       // Trigger listening animation when connected
-      triggerAnimation('mouseHover', 'Avatar'); // or use 'start' if you prefer
+      // triggerAnimation('mouseHover', 'Avatar'); // or use 'start' if you prefer
     },
     onDisconnect: () => {
       setIsConnecting(false);
       // Return to idle state
-      triggerAnimation('start', 'Avatar');
+      // triggerAnimation('start', 'Avatar');
     },
     onError: (error) => {
       console.error('Conversation error:', error);
       setIsConnecting(false);
       // Return to idle on error
-      triggerAnimation('start', 'Avatar');
+      // triggerAnimation('start', 'Avatar');
     },
     onModeChange: (mode) => {
       console.log('Conversation mode changed:', mode);
@@ -170,9 +162,9 @@ function Avatar() {
       
       // Trigger animations based on conversation mode
       if (mode.mode === 'speaking') {
-        triggerAnimation('mouseDown', 'Avatar'); // Speaking animation
+        // triggerAnimation('mouseDown', 'Avatar'); // Speaking animation
       } else if (mode.mode === 'listening') {
-        triggerAnimation('mouseHover', 'Avatar'); // Listening animation
+        // triggerAnimation('mouseHover', 'Avatar'); // Listening animation
       }
     },
   });
@@ -181,16 +173,15 @@ function Avatar() {
   useEffect(() => {
     if (conversation.status === 'connected') {
       if (conversation.isSpeaking) {
-        console.log("SPEAKING")
-        console.log("==============================")
-        triggerAnimation('mouseDown', 'Avatar'); // Speaking
+        avatarToAnimate.current.emitEvent('mouseDown');
       } else {
-        triggerAnimation('mouseHover', 'Avatar'); // Listening
+        avatarToAnimate.current.emitEvent('');
+        ballsToAnimate.current.emitEvent('mouseUp');
       }
     } else if (conversation.status === 'connecting') {
-      triggerAnimation('keyDown', 'Avatar'); // Thinking/connecting
+      // triggerAnimation('keyDown', 'Avatar'); // Thinking/connecting
     } else {
-      triggerAnimation('start', 'Avatar'); // Idle
+      // triggerAnimation('start', 'Avatar'); // Idle
     }
   }, [conversation.status, conversation.isSpeaking]);
 
@@ -235,7 +226,7 @@ function Avatar() {
                 }}
               >
                 <div className="absolute inset-0">
-                  <Spline scene="https://prod.spline.design/uFrHM1KSZn46gTnk/scene.splinecode" onLoad={onLoad} />
+                  <Spline scene={SPLINE_URL} onLoad={onLoad} />
                 </div>
 
                 {/* Connection Status Badge */}
@@ -297,7 +288,7 @@ function Avatar() {
                 )}
 
                 {/* Test Button for Car Display (for development) */}
-                <button
+                {/* <button
                   onClick={() => {
                     // Test with real 2024 Prius data (has full visual data from database)
                     const testCarData = {
@@ -357,7 +348,7 @@ function Avatar() {
                   className="px-4 py-2 bg-[var(--toyota-red)]/20 hover:bg-[var(--toyota-red)]/30 text-[var(--toyota-red)] text-sm rounded-lg border border-[var(--toyota-red)]/30 transition-all duration-200"
                 >
                   Test Car Display
-                </button>
+                </button> */}
               </div>
             </div>
           </div>

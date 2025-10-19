@@ -44,6 +44,7 @@ frontend/next-env.d.ts
 
 backend/venv/   
 backend/.env*
+backend/fb-admin-sdk.json
 
 # Python cache files - comprehensive patterns
 __pycache__/

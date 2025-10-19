@@ -5,3 +5,7 @@ supabase
 python-dotenv
 PyJWT
 httpx
+firebase-admin
+selenium
+beautifulsoup4
+requests
