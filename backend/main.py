@@ -83,6 +83,9 @@ api.include_router(inventory_router, tags=["inventory"])
 from routes.coach_routes import coach_router
 api.include_router(coach_router, tags=["coach"])
 
+from routes.nessie_routes import nessie_router
+api.include_router(nessie_router, tags=["nessie"])
+
 
 # Debug router (define BEFORE mounting `api`)
 debug = APIRouter(prefix="/debug")
@@ -103,6 +106,13 @@ def debug_env():
         "ELEVEN_API_KEY": mask(os.getenv("ELEVEN_API_KEY")),
         "ELEVEN_VOICE_ID": mask(os.getenv("ELEVEN_VOICE_ID")),
     }
+
+from fastapi.routing import APIRoute
+
+@debug.get("/routes")
+def list_routes():
+    return sorted([r.path for r in app.routes if isinstance(r, APIRoute)])
+
 
 # mount debug under /api
 api.include_router(debug, tags=["debug"])

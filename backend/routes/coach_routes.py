@@ -164,3 +164,58 @@ async def speak_quote(x: QuoteRequest):
         r.raise_for_status()
         return Response(content=r.content, media_type="audio/mpeg")
 
+from fastapi import Depends
+from .nessie_routes import summary as nessie_summary  # relative import if routes is a package
+
+@coach_router.post("/quote-from-nessie/{customer_id}", response_model=QuoteResponse)
+async def quote_from_nessie(
+    customer_id: str,
+    x: QuoteRequest
+):
+    """
+    Use Nessie to populate affordability fields (income/outflows/bills),
+    while the caller provides the vehicle pricing knobs.
+    """
+    # fetch financial summary (works in DEV even without API key due to fallback)
+    s = await nessie_summary(customer_id)  # returns NessieSummaryOut-compatible dict
+
+    # override affordability fields from Nessie
+    x.gross_monthly_income   = x.gross_monthly_income   or s["monthly_inflow"]
+    x.avg_monthly_outflows   = x.avg_monthly_outflows   or s["monthly_outflow"]
+    x.recurring_bills        = x.recurring_bills        or s["recurring_bills"]
+
+    return quote(x)
+
+@coach_router.post("/speak-quote-from-nessie/{customer_id}", response_class=Response)
+async def speak_quote_from_nessie(customer_id: str, x: QuoteRequest):
+    # 1) Pull Nessie summary (dev fallback works if no key set)
+    s = await nessie_summary(customer_id)
+
+    # 2) Override affordability from Nessie when not supplied
+    x.gross_monthly_income = x.gross_monthly_income or s["monthly_inflow"]
+    x.avg_monthly_outflows = x.avg_monthly_outflows or s["monthly_outflow"]
+    x.recurring_bills = x.recurring_bills or s["recurring_bills"]
+
+    # 3) Compute quote and speech script
+    q = quote(x)
+    script = _mk_script(q.finance, q.lease, q.preferred_plan, q.monthly_target, q.advice, q.notes, q.suggestions)
+
+    # 4) ElevenLabs TTS
+    api_key = os.getenv("ELEVEN_API_KEY") or os.getenv("ELEVENLABS_API_KEY")
+    voice_id = os.getenv("ELEVEN_VOICE_ID")
+    if not api_key or not voice_id:
+        raise HTTPException(400, "ElevenLabs not configured")
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {"xi-api-key": api_key, "Content-Type": "application/json", "Accept": "audio/mpeg"}
+    payload = {"text": script, "model_id": "eleven_monolingual_v1",
+               "voice_settings": {"stability": 0.5, "similarity_boost": 0.7}}
+
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        r = await client.post(url, headers=headers, json=payload)
+        r.raise_for_status()
+        return Response(
+            content=r.content,
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "attachment; filename=quote_nessie.mp3"},
+        )
