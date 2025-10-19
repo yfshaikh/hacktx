@@ -72,7 +72,7 @@ export function LoanOptionsCard({ data, isOpen, onClose, position = 0 }: LoanOpt
                   className="h-8 w-8 hover:bg-[var(--muted)]"
                 >
                   <ChevronRight 
-                    className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                    className={`h-4 w-4 transition-transform text-white ${isExpanded ? 'rotate-180' : ''}`} 
                   />
                 </Button>
                 <Button
@@ -81,7 +81,7 @@ export function LoanOptionsCard({ data, isOpen, onClose, position = 0 }: LoanOpt
                   onClick={onClose}
                   className="h-8 w-8 hover:bg-[var(--muted)]"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-white" />
                 </Button>
               </div>
             </div>

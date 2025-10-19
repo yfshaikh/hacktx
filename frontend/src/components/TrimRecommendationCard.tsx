@@ -79,7 +79,7 @@ export function TrimRecommendationCard({
                   className="h-8 w-8 hover:bg-[var(--muted)]"
                 >
                   <ChevronRight 
-                    className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                    className={`h-4 w-4 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                   />
                 </Button>
                 <Button
@@ -88,7 +88,7 @@ export function TrimRecommendationCard({
                   onClick={onClose}
                   className="h-8 w-8 hover:bg-[var(--muted)]"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-white" />
                 </Button>
               </div>
             </div>

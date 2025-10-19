@@ -1,13 +1,12 @@
 @import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
 /* @import "tw-animate-css"; */
-
-
-
 
 @layer base {
   :root {
     --radius: 1rem;
-    
+
     /* Toyota Brand Colors */
     --toyota-red: #EB0A1E;
     --toyota-red-dark: #C10015;
@@ -18,7 +17,7 @@
     --toyota-gray-light: #3F3F3F;
     --toyota-white: #FFFFFF;
     --toyota-black: #000000;
-    
+
     /* Core Theme Colors - Dark Toyota Theme */
     --background: #0A0A0A;
     --foreground: #F5F5F5;
@@ -39,7 +38,7 @@
     --border: #3F3F3F;
     --input: #2D2D2D;
     --ring: var(--toyota-red);
-    
+
     /* Semantic Colors - Toyota Dark Theme */
     --success: #22C55E;
     --success-foreground: var(--toyota-white);
@@ -49,7 +48,7 @@
     --error-foreground: var(--toyota-white);
     --info: #3B82F6;
     --info-foreground: var(--toyota-white);
-    
+
     /* Chart Colors - Toyota-inspired Dark Palette */
     --chart-1: var(--toyota-red);
     --chart-2: var(--toyota-silver);
@@ -59,10 +58,10 @@
     --chart-6: #8B5CF6;
     --chart-7: #F97316;
     --chart-8: #06B6D4;
-    
+
     /* Coin/Gold Color - Metallic Toyota Silver */
     --coin-gold: var(--toyota-silver);
-    
+
     /* Glass Effect Colors - Dark Toyota Glass Theme */
     --glass-background: rgba(26, 26, 26, 0.4);
     --glass-border: rgba(63, 63, 63, 0.3);
@@ -76,7 +75,7 @@
     --glass-message-user-border: rgba(235, 10, 30, 0.3);
     --glass-message-assistant-bg: rgba(45, 45, 45, 0.4);
     --glass-message-assistant-border: rgba(63, 63, 63, 0.3);
-    
+
     /* Glass Effect Highlights and Shadows */
     --glass-highlight: rgba(255, 255, 255, 0.05);
     --glass-highlight-strong: rgba(255, 255, 255, 0.1);
@@ -86,7 +85,7 @@
     --glass-glow-strong: rgba(235, 10, 30, 0.2);
     --glass-scrollbar: rgba(63, 63, 63, 0.5);
     --glass-scrollbar-hover: rgba(197, 197, 197, 0.7);
-    
+
     /* Adventure Theme Colors - Dark Toyota Variants */
     --adventure-space-primary: var(--toyota-red);
     --adventure-space-secondary: var(--toyota-silver);
@@ -94,7 +93,7 @@
     --adventure-pirate-primary: var(--toyota-red-dark);
     --adventure-pirate-secondary: var(--toyota-gray-medium);
     --adventure-pirate-accent: var(--toyota-silver);
-    
+
     /* Adventure UI Dark Glass Colors - Toyota Theme */
     --adventure-glass-bg: rgba(26, 26, 26, 0.3);
     --adventure-glass-dark-bg: rgba(10, 10, 10, 0.8);
@@ -103,7 +102,7 @@
     --adventure-text-primary: var(--toyota-white);
     --adventure-text-secondary: var(--toyota-silver);
     --adventure-warning: #F59E0B;
-    
+
     /* Sidebar Colors - Dark Toyota Theme */
     --sidebar: var(--toyota-gray-dark);
     --sidebar-foreground: var(--toyota-white);
@@ -113,7 +112,7 @@
     --sidebar-accent-foreground: var(--toyota-white);
     --sidebar-border: var(--toyota-gray-light);
     --sidebar-ring: var(--toyota-red);
-    
+
     /* Gradient Colors for Complex UI Elements */
     --gradient-primary-start: var(--toyota-red);
     --gradient-primary-end: var(--toyota-red-dark);
@@ -121,12 +120,12 @@
     --gradient-secondary-end: var(--toyota-gray-light);
     --gradient-accent-start: var(--toyota-silver);
     --gradient-accent-end: var(--toyota-white);
-    
+
     /* Interactive State Colors */
     --hover-overlay: rgba(235, 10, 30, 0.1);
     --active-overlay: rgba(235, 10, 30, 0.15);
     --focus-ring: rgba(235, 10, 30, 0.5);
-    
+
     /* Fallback Values for Legacy Support */
     --fallback-primary: var(--toyota-red);
     --fallback-secondary: var(--toyota-gray-medium);
@@ -194,25 +193,6 @@
   --color-adventure-warning: var(--adventure-warning);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @utility container {
   margin-inline: auto;
   padding-inline: 2rem;
@@ -240,5 +220,4 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
-} 
-
+}
