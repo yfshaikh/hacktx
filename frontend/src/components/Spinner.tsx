@@ -2,162 +2,80 @@ import { useState, useEffect } from "react";
 
 interface CarSpinnerProps {
   model: string;
-  modelTag: string;
-  modelGrade: string;
-  colorCodes: string;
-  year?: string; // Vehicle year for image URL
+  year?: string;
   imageIndexOverride?: number;
-  imageCountOverride?: number;
   card?: boolean;
   noPadding?: boolean;
+  // Scraped images from cars.com
+  scrapedImages?: Record<string, string>; // Dictionary of image URLs {"0": "url1", "1": "url2", ...}
+  // Legacy props (no longer used but kept for compatibility)
+  modelTag?: string;
+  modelGrade?: string;
+  colorCodes?: string;
+  imageCountOverride?: number;
   colorIndex?: number;
+  imageType?: string;
 }
 
 const CarSpinner: React.FC<CarSpinnerProps> = ({
-  model,
-  modelTag,
-  modelGrade,
-  colorCodes,
-  year: yearProp,
   imageIndexOverride,
-  imageCountOverride,
   card,
   noPadding,
-  colorIndex,
+  scrapedImages,
 }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(10);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isMouseInside, setIsMouseInside] = useState(false);
-  const [randomColor, setRandomColor] = useState("");
-  const [randomModelGrade, setRandomModelGrade] = useState("");
-  const [randomModelTag, setRandomModelTag] = useState("");
-  const [imageCount, setImageCount] = useState(36);
-  const [year, setYear] = useState(yearProp || "2024"); // Use prop or default to 2024
-  const [modelName, setModelName] = useState("");
+  const imageCount = scrapedImages ? Object.keys(scrapedImages).length : 0;
 
   useEffect(() => {
-    setCurrentImageIndex(imageCount - 3);
-  }, [imageCount]);
-
-  useEffect(() => {
-    if (
-      imageCountOverride !== undefined &&
-      imageCountOverride > 0 &&
-      Number.isInteger(imageCountOverride)
-    ) {
-      setImageCount(imageCountOverride);
-    } else {
-      setImageCount(36);
-    }
-  }, [imageCountOverride]);
-
-  useEffect(() => {
-    if (
-      imageIndexOverride !== undefined &&
-      imageIndexOverride >= 0 &&
-      imageIndexOverride < imageCount
-    ) {
+    if (imageIndexOverride !== undefined && imageIndexOverride >= 0 && imageIndexOverride < imageCount) {
       setCurrentImageIndex(imageIndexOverride);
-    } else if (imageIndexOverride !== undefined) {
-      setCurrentImageIndex(17);
     }
   }, [imageIndexOverride, imageCount]);
 
-
-  // Update year when prop changes
-  useEffect(() => {
-    if (yearProp) {
-      setYear(yearProp);
-    }
-  }, [yearProp]);
-
-  useEffect(() => {
-    if (model.split(" ")[1]?.toLowerCase() === "highlander") {
-      console.log("highlander: ", model);
-      setModelName("grandhighlander");
-    } else if (model.split(" ")[0]?.toLowerCase() === "gr") {
-      setModelName(model.replace(" ", "").toLowerCase());
-    } else if (model.split(" ")[0]?.toLowerCase() === "crown") {
-      setModelName("toyotacrown");
-    } else if (model.split(" ")[0]?.toLowerCase() === "land") {
-      setModelName("landcruiser");
-    }
-    else {
-      setModelName(model.split(" ")[0]?.toLowerCase() || "");
-    }
-  }, [model]);
-
-  useEffect(() => {
-    console.log("🎨 Spinner Props:", { colorCodes, modelGrade, modelTag, model });
-    
-    const colorCodeArray = colorCodes
-      .split(",")
-      .map((color) => color.trim().toLowerCase());
-    const modelGradeArray = modelGrade
-      .split(",")
-      .map((grade) => grade.trim());
-    let modelTagArray: string[] = [];
-    if (modelTag) {
-      modelTagArray = modelTag.split(",").map((tag) => tag.trim());
-    }
-    
-    console.log("📊 Arrays:", { 
-      colorCodeArray, 
-      modelGradeArray, 
-      modelTagArray,
-      lengths: {
-        colors: colorCodeArray.length,
-        grades: modelGradeArray.length,
-        tags: modelTagArray.length
-      }
-    });
-    
-    if (colorIndex === undefined) {
-      const randomIndex = Math.floor(Math.random() * colorCodeArray.length);
-      setRandomColor(colorCodeArray[randomIndex] || "");
-      setRandomModelGrade(modelGradeArray[randomIndex] || "");
-      setRandomModelTag(modelTagArray[randomIndex] || "");
-      console.log("🎲 Random selection (index " + randomIndex + "):", {
-        color: colorCodeArray[randomIndex],
-        grade: modelGradeArray[randomIndex],
-        tag: modelTagArray[randomIndex]
-      });
-    } else {
-      setRandomColor(colorCodeArray[colorIndex] || "");
-      setRandomModelGrade(modelGradeArray[colorIndex] || "");
-      setRandomModelTag(modelTagArray[colorIndex] || "");
-      console.log("🎯 Specific index " + colorIndex + ":", {
-        color: colorCodeArray[colorIndex],
-        grade: modelGradeArray[colorIndex],
-        tag: modelTagArray[colorIndex]
-      });
-    }
-  }, [colorCodes, modelGrade, modelTag, colorIndex, model]);
-
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    console.log("handleMouseMove");
-    if (isMouseInside && imageIndexOverride === undefined) {
-
+    if (isMouseInside && imageIndexOverride === undefined && imageCount > 0) {
       const { offsetWidth, offsetLeft } = e.currentTarget;
       const relativeX = e.clientX - offsetLeft;
-      const percentage = relativeX / offsetWidth + 0.4;
+      const percentage = relativeX / offsetWidth;
       const newIndex = Math.floor(percentage * imageCount) % imageCount;
       setCurrentImageIndex(newIndex);
     }
   };
 
+  // Get the image URL from scraped images
+  const getImageUrl = () => {
+    if (!scrapedImages || imageCount === 0) {
+      return null;
+    }
+    
+    // Get image by exact key first
+    const imageUrl = scrapedImages[currentImageIndex.toString()];
+    if (imageUrl) {
+      return imageUrl;
+    }
+    
+    // Fallback: use modulo to cycle through available images
+    const availableKeys = Object.keys(scrapedImages).sort((a, b) => parseInt(a) - parseInt(b));
+    if (availableKeys.length > 0) {
+      const keyIndex = currentImageIndex % availableKeys.length;
+      return scrapedImages[availableKeys[keyIndex]];
+    }
+    
+    return null;
+  };
+
+  const imageUrl = getImageUrl();
+  const hasValidImage = imageUrl !== null;
+
   return (
     <div
-      onMouseEnter={() => {
-        setIsMouseInside(true);
-        console.log("mouse enter");
-      }}
+      onMouseEnter={() => setIsMouseInside(true)}
       onMouseLeave={() => setIsMouseInside(false)}
       onMouseMove={handleMouseMove}
       className={`flex ${card ? "h-full w-auto" : "h-full w-auto"} items-center justify-center overflow-hidden`}
     >
-      {randomColor === "" ||
-      randomModelGrade === "" ||
-      randomModelTag === "" ? (
+      {!hasValidImage ? (
         <div className="flex h-full w-full items-center justify-center">
           <div className="flex flex-col items-center justify-center gap-3 text-center p-6">
             <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center">
@@ -167,37 +85,24 @@ const CarSpinner: React.FC<CarSpinnerProps> = ({
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
-                360° images not available
+                Images not available
               </p>
               <p className="text-xs text-muted-foreground/70">
-                for this year/model
+                for this vehicle
               </p>
             </div>
           </div>
         </div>
       ) : (
         <img
-          src={(() => {
-            const url = `https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/max/${year}/${modelName}/${randomModelGrade}/${randomModelTag}/${randomColor}/${imageCount}/${currentImageIndex}.png?fmt=webp-alpha&wid=930&qlt=90`;
-            console.log("🖼️ Image URL:", url);
-            console.log("🔧 URL Components:", {
-              year,
-              modelName,
-              randomModelGrade,
-              randomModelTag,
-              randomColor,
-              imageCount,
-              currentImageIndex
-            });
-            return url;
-          })()}
-          alt="Spinning Car"
-          onLoad={() => console.log("✅ Image loaded successfully")}
+          src={imageUrl}
+          alt="Car Photo"
+          onLoad={() => console.log("✅ Image loaded successfully:", imageUrl)}
           onError={(e) => {
             console.error("❌ Image failed to load");
             console.error("Failed URL:", (e.target as HTMLImageElement).src);
           }}
-          className={`${card ? "h-full w-full -translate-x-7" : "w-full"} object-cover ${!noPadding && card ? "py-12" : "py-5"}`}
+          className={`w-full h-full object-contain ${!noPadding && card ? "py-12" : "py-5"}`}
         />
       )}
     </div>

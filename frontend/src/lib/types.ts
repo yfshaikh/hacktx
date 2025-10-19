@@ -94,6 +94,20 @@ export interface Vehicle {
   imageName?: string | null;
   imageCount?: number | null;
   url?: string | null;
+  
+  // Scraped car data fields
+  images?: Record<string, string> | null; // Dictionary of image URLs from scraped data
+  imageType?: "toyota360" | "scraped" | null; // Type of images available
+  horsepower?: string | null;
+  seatingCapacity?: string | null;
+  cargoSpace?: string | null;
+  towingCapacity?: string | null;
+  fuelTankCapacity?: string | null;
+  curbWeight?: string | null;
+  groundClearance?: string | null;
+  dimensions?: string | null;
+  bodyStyle?: string | null;
+  drivetrain?: string | null;
 }
 
 // Mock vehiclesTable for type compatibility

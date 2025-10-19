@@ -26,30 +26,11 @@ interface CarVRCardProps {
 
 export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [colorSelected, setColorSelected] = useState(0);
 
   if (!car) return null;
 
   // Check if car has images
-  const hasImages = car.vehicle.imageCount && car.vehicle.imageCount > 0;
-  
-  // Get valid colors (only those with images)
-  const getValidColors = () => {
-    if (!car.vehicle.colorCodes || !hasImages) return [];
-    const colorCodesArray = car.vehicle.colorCodes.split(",");
-    const colorHexArray = car.vehicle.colorHexCodes?.split(",") || [];
-    
-    // Filter colors that have corresponding hex codes and are within image count range
-    return colorCodesArray
-      .map((code, index) => ({
-        code: code.trim(),
-        hex: colorHexArray[index]?.trim(),
-        index
-      }))
-      .filter(color => color.hex); // Only include colors with hex codes
-  };
-  
-  const validColors = getValidColors();
+  const hasImages = car.vehicle.images && Object.keys(car.vehicle.images).length > 0;
 
   return (
     <AnimatePresence mode="wait">
@@ -111,14 +92,10 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                 {hasImages && (
                   <div className="relative h-40 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
                     <Spinner
-                      colorCodes={car.vehicle.colorCodes ?? ""}
-                      colorIndex={colorSelected}
                       model={car.vehicle.model ?? ""}
                       year={car.vehicle.year ?? "2024"}
-                      modelTag={car.vehicle.modelTag ?? ""}
-                      modelGrade={car.vehicle.modelGrade ?? ""}
-                      imageCountOverride={car.vehicle.imageCount}
                       card={false}
+                      scrapedImages={car.vehicle.images ?? undefined}
                     />
                     
                     {/* Match Badge */}
@@ -188,14 +165,10 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                   {hasImages && (
                     <div className="relative h-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]">
                       <Spinner
-                        colorCodes={car.vehicle.colorCodes ?? ""}
-                        colorIndex={colorSelected}
                         model={car.vehicle.model ?? ""}
                         year={car.vehicle.year ?? "2024"}
-                        modelTag={car.vehicle.modelTag ?? ""}
-                        modelGrade={car.vehicle.modelGrade ?? ""}
-                        imageCountOverride={car.vehicle.imageCount}
                         card={false}
+                        scrapedImages={car.vehicle.images ?? undefined}
                       />
                       
                       {/* Match Badge */}
@@ -262,42 +235,42 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                     </div>
                   </div>
 
-                  {/* Additional Vehicle Details */}
-                  {(car.vehicle.combinedMpgForFuelType1 || car.vehicle.cylinders || car.vehicle.drive) && (
+                  {/* Vehicle Specs */}
+                  {(car.vehicle.horsepower || car.vehicle.dimensions || car.vehicle.drivetrain || car.vehicle.bodyStyle) && (
                     <>
                       <Separator />
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-[var(--foreground)]">Performance & Efficiency</h4>
+                        <h4 className="font-semibold text-[var(--foreground)]">Vehicle Specs</h4>
                         <div className="grid grid-cols-2 gap-3">
-                          {car.vehicle.combinedMpgForFuelType1 && (
+                          {car.vehicle.horsepower && (
                             <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Combined MPG</div>
+                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Horsepower</div>
                               <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.combinedMpgForFuelType1}
+                                {car.vehicle.horsepower}
                               </div>
                             </div>
                           )}
-                          {car.vehicle.cylinders && (
+                          {car.vehicle.bodyStyle && (
                             <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Cylinders</div>
+                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Body Style</div>
                               <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.cylinders}
+                                {car.vehicle.bodyStyle}
                               </div>
                             </div>
                           )}
-                          {car.vehicle.drive && (
+                          {car.vehicle.drivetrain && (
                             <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Drive Type</div>
+                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Drivetrain</div>
                               <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.drive}
+                                {car.vehicle.drivetrain}
                               </div>
                             </div>
                           )}
-                          {car.vehicle.engineDisplacement && (
+                          {car.vehicle.dimensions && (
                             <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Engine Size</div>
+                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Dimensions</div>
                               <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.engineDisplacement}L
+                                {car.vehicle.dimensions}
                               </div>
                             </div>
                           )}
@@ -306,80 +279,6 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
                     </>
                   )}
                   
-                  {/* MPG Details */}
-                  {(car.vehicle.cityMpgForFuelType1 || car.vehicle.highwayMpgForFuelType1) && (
-                    <>
-                      <Separator />
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-[var(--foreground)]">Fuel Economy</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {car.vehicle.cityMpgForFuelType1 && (
-                            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">City MPG</div>
-                              <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.cityMpgForFuelType1}
-                              </div>
-                            </div>
-                          )}
-                          {car.vehicle.highwayMpgForFuelType1 && (
-                            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/50">
-                              <div className="text-sm text-[var(--muted-foreground)] mb-1">Highway MPG</div>
-                              <div className="font-medium text-[var(--foreground)]">
-                                {car.vehicle.highwayMpgForFuelType1}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Colors - Only show if there are valid colors */}
-                  {validColors.length > 0 && (
-                    <>
-                      <Separator />
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-[var(--foreground)]">Available Colors</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {validColors.map((color) => {
-                            const isGradient = color.hex.startsWith("(");
-                            const gradientColors = isGradient
-                              ? color.hex.replace("(", "").replace(")", "").split(" ").map((code) => code.trim())
-                              : [];
-
-                            return isGradient ? (
-                              <div
-                                key={color.code + color.index}
-                                className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
-                                  colorSelected === color.index 
-                                    ? 'border-[var(--toyota-red)] scale-110' 
-                                    : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
-                                }`}
-                                onClick={() => setColorSelected(color.index)}
-                                style={{
-                                  background: `linear-gradient(-45deg, #${gradientColors[0]} 50%, #${gradientColors[1]} 50%)`,
-                                }}
-                              />
-                            ) : (
-                              <div
-                                key={color.code + color.index}
-                                className={`h-6 w-6 rounded-full cursor-pointer border-2 transition-all ${
-                                  colorSelected === color.index 
-                                    ? 'border-[var(--toyota-red)] scale-110' 
-                                    : 'border-[var(--border)] hover:border-[var(--toyota-red)]/50'
-                                }`}
-                                onClick={() => setColorSelected(color.index)}
-                                style={{
-                                  backgroundColor: `#${color.hex}`,
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <Separator />
-                    </>
-                  )}
 
                   {/* Key Features */}
                   <div className="space-y-3">

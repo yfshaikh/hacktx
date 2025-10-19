@@ -15,33 +15,13 @@
     },
     "model": {
       "type": "string",
-      "description": "Model name like Camry, Prius, RAV4, Tacoma, Highlander, 4Runner, Corolla, Tundra",
+      "description": "Model name like Camry, Prius, RAV4, Tacoma, Highlander, 4Runner, Corolla, Tundra, Sienna, Sequoia, Avalon",
       "example": "Camry"
     },
     "year": {
       "type": "string",
-      "description": "Optional: Model year like '2024'. Use '2024' for full pricing and 360° images. Defaults to newest if omitted.",
-      "example": "2024"
-    },
-    "fuelType": {
-      "type": "string",
-      "description": "Optional: Filter by fuel type. Options: 'Regular' (gasoline), 'Hybrid' (gas+electric), 'Electric', 'E85'",
-      "example": "Hybrid"
-    },
-    "drive": {
-      "type": "string",
-      "description": "Optional: Filter by drive type. Options: 'Front-Wheel', 'Rear-Wheel', 'All-Wheel', '4-Wheel', 'Part-time 4-Wheel'",
-      "example": "All-Wheel"
-    },
-    "minMpg": {
-      "type": "number",
-      "description": "Optional: Minimum combined MPG. Use for finding fuel-efficient vehicles (e.g., 30, 40, 50)",
-      "example": 30
-    },
-    "maxPrice": {
-      "type": "number",
-      "description": "Optional: Maximum MSRP in dollars. Only returns vehicles with pricing. Use for budget constraints (e.g., 35000, 50000)",
-      "example": 35000
+      "description": "Optional: Model year from 2015-2020. If not specified, returns the newest available year.",
+      "example": "2018"
     }
   },
   "required": ["make", "model"]
@@ -56,11 +36,16 @@
 |-----------|----------|-------|
 | `make` | 100% | Always "Toyota" |
 | `model` | 100% | All vehicles have model name |
-| `year` | 100% | 2015-2026 available |
-| `fuelType` | 100% | All 809 vehicles ✅ |
-| `drive` | 100% | All 809 vehicles ✅ |
-| `minMpg` | 100% | All 809 vehicles have MPG ✅ |
-| `maxPrice` | 8.2% | Only 66 vehicles (2024 models) have pricing ⚠️ |
+| `year` | 100% | 2015-2020 available |
+| Images | 100% | All vehicles have real photos from cars.com ✅ |
+| Pricing | 100% | All vehicles have MSRP ✅ |
+| Specs | 100% | Horsepower, seating, dimensions, drivetrain, body style ✅ |
+
+### Data Source:
+- **Scraped from cars.com**: Real high-quality photos, detailed specs, accurate pricing
+- **Years covered**: 2015-2020
+- **Photo count**: Multiple angles per vehicle (typically 20-40+ photos)
+- **Interactive**: Users can drag to rotate through photos
 
 ---
 
@@ -69,75 +54,78 @@
 ### 1. Basic Search
 ```
 User: "Show me a Camry"
-Agent: search_car(make="Toyota", model="Camry", year="2024")
+Agent: search_car(make="Toyota", model="Camry")
 ```
 
-### 2. Fuel-Efficient Vehicle
+### 2. Specific Year
 ```
-User: "I want a fuel-efficient car, at least 40 MPG"
-Agent: search_car(make="Toyota", model="Prius", year="2024", minMpg=40)
-```
-
-### 3. AWD Vehicle
-```
-User: "Show me a RAV4 with all-wheel drive"
-Agent: search_car(make="Toyota", model="RAV4", year="2024", drive="All-Wheel")
+User: "Show me a 2018 RAV4"
+Agent: search_car(make="Toyota", model="RAV4", year="2018")
 ```
 
-### 4. Budget-Conscious
+### 3. SUV Request
 ```
-User: "What Toyota can I get for under $30,000?"
-Agent: search_car(make="Toyota", model="Corolla", year="2024", maxPrice=30000)
-```
-
-### 5. Hybrid Under Budget
-```
-User: "Show me a hybrid under $40k"
-Agent: search_car(make="Toyota", model="Prius", year="2024", fuelType="Hybrid", maxPrice=40000)
+User: "Show me a 4Runner"
+Agent: search_car(make="Toyota", model="4Runner")
 ```
 
-### 6. 4WD Truck
+### 4. Truck Request
 ```
-User: "I need a 4-wheel drive truck"
-Agent: search_car(make="Toyota", model="Tacoma", year="2024", drive="4-Wheel")
+User: "I want to see a Tacoma"
+Agent: search_car(make="Toyota", model="Tacoma")
+```
+
+### 5. Sedan Request
+```
+User: "Show me a 2017 Camry"
+Agent: search_car(make="Toyota", model="Camry", year="2017")
+```
+
+### 6. Minivan Request
+```
+User: "Show me a Sienna"
+Agent: search_car(make="Toyota", model="Sienna")
 ```
 
 ---
 
-## Valid Filter Values
+## Available Models
 
-### Fuel Types (case-insensitive, partial match):
-- `"Regular"` - Regular gasoline
-- `"Hybrid"` - Hybrid vehicles (will match "Regular Gas and Electricity")
-- `"Electric"` - Electric or plug-in hybrid
-- `"E85"` - Flex fuel vehicles
+Popular models in the database (2015-2020):
 
-### Drive Types (case-insensitive, partial match):
-- `"Front-Wheel"` or `"FWD"` - Front-wheel drive
-- `"Rear-Wheel"` or `"RWD"` - Rear-wheel drive
-- `"All-Wheel"` or `"AWD"` - All-wheel drive
-- `"4-Wheel"` or `"4WD"` - 4-wheel drive
-- `"Part-time"` - Part-time 4WD
+### Sedans:
+- Camry
+- Corolla
+- Avalon
 
-### MPG Ranges (approximate):
-- **Economy**: 30-40 MPG (Corolla, Camry)
-- **Hybrid**: 40-60 MPG (Prius, RAV4 Hybrid)
-- **Performance/Truck**: 15-25 MPG (Tundra, 4Runner, GR Supra)
-- **SUV**: 20-35 MPG (RAV4, Highlander)
+### SUVs:
+- RAV4
+- 4Runner
+- Highlander
+- Sequoia
 
-### Price Ranges (2024 models only):
-- **Budget**: $22k-$28k (Corolla, Corolla Cross)
-- **Mid-range**: $28k-$40k (Camry, Prius, RAV4)
-- **Premium**: $40k-$60k (Highlander, 4Runner, Land Cruiser)
-- **Luxury/Performance**: $60k+ (Tundra PRO, GR Supra, Sequoia)
+### Trucks:
+- Tacoma
+- Tundra
+
+### Hybrids:
+- Prius
+- Camry Hybrid
+- RAV4 Hybrid
+- Highlander Hybrid
+
+### Minivan:
+- Sienna
 
 ---
 
 ## Important Notes
 
-1. **Always use `year="2024"`** for best results (pricing + 360° images)
-2. **`maxPrice` only works with 2024 models** (only they have MSRP data)
-3. **Filters are additive** - more filters = more specific results
-4. **Partial matches work** - "Hybrid" matches "Regular Gas and Electricity"
-5. **Case-insensitive** - "front-wheel" = "Front-Wheel" = "FWD"
+1. **All vehicles have real photos** - High-quality images from cars.com
+2. **Interactive viewing** - Users can drag through 20-40+ photos per vehicle
+3. **Complete data** - Every vehicle has pricing, specs, and multiple photos
+4. **Year range** - 2015-2020 Toyota models
+5. **Partial matches work** - "Runner" will find "4Runner"
+6. **Case-insensitive** - "camry" = "Camry" = "CAMRY"
+7. **Default to newest** - If no year specified, returns the most recent available
 
