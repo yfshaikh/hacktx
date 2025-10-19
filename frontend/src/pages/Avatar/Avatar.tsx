@@ -2,7 +2,7 @@ import Spline from '@splinetool/react-spline';
 import { useConversation } from '@elevenlabs/react';
 import { useState, useRef, useEffect } from 'react';
 import { getSignedUrl } from '../../lib/api/elevenlabs';
-import { CarSidebar } from '../../components/CarSidebar';
+import { CarVRCard } from '../../components/CarVRCard';
 import type { VehicleScore } from '../../lib/types';
 
 function Avatar() {
@@ -221,47 +221,17 @@ function Avatar() {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-[var(--background)]">
-
       {/* Main Content */}
-      <main className={`flex-1 relative overflow-hidden transition-all duration-300 ${
-        isCarSidebarOpen ? 'pr-96' : ''
-      }`}>
-        {/* Background Grid Pattern */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(var(--border) 1px, transparent 1px),
-              linear-gradient(90deg, var(--border) 1px, transparent 1px)
-            `,
-            backgroundSize: '50px 50px',
-          }}
-        />
-        
-        {/* Red Accent Glow */}
-        <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] opacity-10 blur-[100px] pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, var(--toyota-red) 0%, transparent 70%)',
-          }}
-        />
-
+      <main className="flex-1 relative overflow-hidden">
         {/* Avatar Container */}
         <div className="relative h-full flex items-center justify-center p-4">
-          <div className="w-full max-w-6xl mx-auto">
-            {/* Avatar Frame */}
+          <div className="w-full max-w-5xl mx-auto">
             <div className="relative w-full">
-              {/* Corner Decorations */}
-              <div className="absolute -top-4 -left-4 w-12 h-12 border-t-2 border-l-2 border-[var(--toyota-red)] rounded-tl-lg opacity-60 z-10"></div>
-              <div className="absolute -top-4 -right-4 w-12 h-12 border-t-2 border-r-2 border-[var(--toyota-red)] rounded-tr-lg opacity-60 z-10"></div>
-              <div className="absolute -bottom-4 -left-4 w-12 h-12 border-b-2 border-l-2 border-[var(--toyota-red)] rounded-bl-lg opacity-60 z-10"></div>
-              <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-2 border-r-2 border-[var(--toyota-red)] rounded-br-lg opacity-60 z-10"></div>
-              
               {/* Main Avatar Container */}
               <div 
-                className="relative bg-[var(--card)] rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl w-full h-[60vh] min-h-[400px] max-h-[600px]"
+                className="relative bg-[var(--card)]/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl w-full h-[65vh] min-h-[500px] max-h-[700px]"
                 style={{
-                  boxShadow: '0 0 40px var(--glass-glow-strong)',
+                  boxShadow: '0 0 30px var(--glass-glow-strong)',
                 }}
               >
                 <div className="absolute inset-0">
@@ -290,78 +260,43 @@ function Avatar() {
                     }`} />
                     {conversation.status === 'connected' 
                       ? conversation.isSpeaking 
-                        ? 'Speaking...' 
+                        ? 'Speaking' 
                         : 'Listening'
                       : conversation.status === 'connecting' 
-                      ? 'Connecting...' 
-                      : 'Disconnected'}
+                      ? 'Connecting' 
+                      : 'Ready'}
                   </div>
                 </div>
               </div>
 
-              {/* Voice Controls */}
-              <div className="mt-6 flex justify-center gap-4">
+              {/* Voice Control - Single Circular Button */}
+              <div className="mt-6 flex justify-center gap-4 items-center">
                 {conversation.status !== 'connected' ? (
                   <button
                     onClick={handleTalkToUs}
                     disabled={isConnecting || conversation.status === 'connecting'}
-                    className="group relative px-8 py-3 bg-[var(--toyota-red)] hover:bg-[var(--toyota-red-dark)] disabled:bg-[var(--toyota-red)]/50 text-[var(--toyota-white)] font-medium rounded-xl transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                    className="group relative w-16 h-16 bg-[var(--toyota-red)] hover:bg-[var(--toyota-red-dark)] disabled:bg-[var(--toyota-red)]/50 text-[var(--toyota-white)] rounded-full transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 disabled:cursor-not-allowed disabled:scale-100"
                   >
                     {isConnecting || conversation.status === 'connecting' ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-[var(--toyota-white)]/30 border-t-[var(--toyota-white)] rounded-full animate-spin" />
-                        Connecting...
-                      </>
+                      <div className="w-6 h-6 border-2 border-[var(--toyota-white)]/30 border-t-[var(--toyota-white)] rounded-full animate-spin" />
                     ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                        </svg>
-                        Start Conversation
-                      </>
+                      <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                      </svg>
                     )}
                   </button>
                 ) : (
                   <button
                     onClick={handleEndConversation}
-                    className="group relative px-8 py-3 bg-[var(--destructive)] hover:bg-[var(--destructive)]/90 text-[var(--destructive-foreground)] font-medium rounded-xl transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
+                    className="group relative w-16 h-16 bg-[var(--destructive)] hover:bg-[var(--destructive)]/90 text-[var(--destructive-foreground)] rounded-full transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
                     </svg>
-                    End Conversation
                   </button>
                 )}
 
-                {/* Voice Status Indicator */}
-                {conversation.status === 'connected' && (
-                  <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
-                    conversation.isSpeaking
-                      ? 'bg-[var(--toyota-red)]/10 border-[var(--toyota-red)]/30'
-                      : 'bg-[var(--card)] border-[var(--border)]'
-                  }`}>
-                    {conversation.isSpeaking ? (
-                      <>
-                        <svg className="w-5 h-5 text-[var(--toyota-red)]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM15.657 6.343a1 1 0 011.414 0A9.972 9.972 0 0119 12a9.972 9.972 0 01-1.929 5.657 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 12a7.971 7.971 0 00-1.343-4.243 1 1 0 010-1.414z" clipRule="evenodd" />
-                          <path fillRule="evenodd" d="M13.828 8.172a1 1 0 011.414 0A5.983 5.983 0 0116 12a5.983 5.983 0 01-.758 3.828 1 1 0 01-1.414-1.414A3.987 3.987 0 0014 12a3.987 3.987 0 00-.172-1.414 1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-[var(--toyota-red)]">Agent is speaking...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5 text-[var(--success)]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-[var(--muted-foreground)]">Listening for your voice...</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Test Button for Car Display (for development) */}
-              <div className="mt-4 flex justify-center">
+                {/* Test Button for Car Display (for development) */}
                 <button
                   onClick={() => {
                     // Test with real 2024 Prius data (has full visual data from database)
@@ -421,7 +356,7 @@ function Avatar() {
                   }}
                   className="px-4 py-2 bg-[var(--toyota-red)]/20 hover:bg-[var(--toyota-red)]/30 text-[var(--toyota-red)] text-sm rounded-lg border border-[var(--toyota-red)]/30 transition-all duration-200"
                 >
-                  Test Car Display (2024 Prius)
+                  Test Car Display
                 </button>
               </div>
             </div>
@@ -429,8 +364,8 @@ function Avatar() {
         </div>
       </main>
 
-      {/* Car Sidebar */}
-      <CarSidebar 
+      {/* VR-Style Car Card */}
+      <CarVRCard 
         car={carData} 
         isOpen={isCarSidebarOpen} 
         onClose={() => setIsCarSidebarOpen(false)} 
