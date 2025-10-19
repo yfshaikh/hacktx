@@ -86,6 +86,15 @@ api.include_router(coach_router, tags=["coach"])
 from routes.nessie_routes import nessie_router
 api.include_router(nessie_router, tags=["nessie"])
 
+from routes.events_routes import events_router
+api.include_router(events_router, tags=["events"])
+
+from routes.optimize_routes import optimize_router
+api.include_router(optimize_router, tags=["optimize"])
+
+from routes.share_routes import share_router
+api.include_router(share_router, tags=["share"])
+
 
 # Debug router (define BEFORE mounting `api`)
 debug = APIRouter(prefix="/debug")

@@ -128,3 +128,27 @@ def compare(x: CalcInput):
     if x.term_months>60 and tier_from_score(x.credit_score)!="prime":
         notes.append("Long terms with higher APR increase total interest—balance monthly vs. total paid.")
     return CompareResponse(finance=fin, lease=lea, notes=notes)
+
+from pydantic import BaseModel, Field, field_validator
+
+class SafeQuoteInputs(BaseModel):
+    msrp: float = Field(..., gt=5000, lt=150000)
+    sell_price: float | None = Field(None, gt=4000, lt=150000)
+    state_tax_rate: float = Field(0.0625, ge=0, le=0.12)
+    doc_fees: float = Field(200, ge=0, le=1000)
+    acquisition_fee: float = Field(650, ge=0, le=1500)
+    title_reg: float = Field(250, ge=0, le=1500)
+    rebates: float = Field(0, ge=0, le=10000)
+    trade_in_credit: float = Field(0, ge=0, le=100000)
+    down_payment: float = Field(0, ge=0, le=50000)
+    term_months: int = Field(36, ge=12, le=84)
+    miles_per_year: int = Field(12000, ge=7500, le=20000)
+    credit_score: int = Field(700, ge=300, le=850)
+
+    @field_validator("sell_price")
+    def sell_price_not_above_msrp(cls, v, info):
+        if v is not None:
+            msrp = info.data.get("msrp")
+            if msrp and v > msrp * 1.2:
+                raise ValueError("sell_price unusually high vs MSRP")
+        return v
