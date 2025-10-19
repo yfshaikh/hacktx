@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Avatar from './pages/Avatar/Avatar';
-import AgentDemo from './pages/AgentDemo/AgentDemo';
 import { CardManagerProvider } from './lib/cardManager';
 import { CardRenderer } from './components/CardRenderer';
+import AuthPage from './pages/auth/AuthPage';
 
 function App() {
   return (
@@ -11,9 +11,8 @@ function App() {
       <Router>
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/" element={<Navigate to="/avatar" replace />} />
+            <Route path="/" element={<AuthPage />} />
             <Route path="/avatar" element={<Avatar />} />
-            <Route path="/agent-demo" element={<AgentDemo />} />
           </Route>
         </Routes>
       </Router>
