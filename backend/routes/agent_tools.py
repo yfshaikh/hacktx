@@ -39,9 +39,9 @@ class LoanAgent(BaseModel):
     model: Optional[str] = "gpt-4o-mini"
 
 class TrimRecAgent(BaseModel):
-    
+    """Request model for trim recommendation agent"""
     features: List[str]
-    model_candidates: Optional[List[str]]
+    model_candidates: Optional[List[str]] = None
 
 class ErrorResponse(BaseModel):
     error: str
@@ -174,9 +174,11 @@ async def get_loan_options(request: LoanAgent):
     description="Get ranked Toyota trim and package recommendations based on desired features"
 )
 async def get_trim_recommendations(request: TrimRecAgent):
- 
+    """Get Toyota trim recommendations based on desired features"""
     try:
         logger.info(f"Processing trim recommendation request with {len(request.features)} features")
+        logger.info(f"Features: {request.features}")
+        logger.info(f"Model candidates: {request.model_candidates}")
         
         # Prepare input for the agent
         agent_input = {

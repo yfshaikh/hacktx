@@ -98,23 +98,39 @@ export async function getTrimRecommendations(
   modelCandidates?: string[]
 ): Promise<TrimRecommendations> {
   try {
+    // Build request body, only include model_candidates if provided
+    const requestBody: any = { features };
+    if (modelCandidates && modelCandidates.length > 0) {
+      requestBody.model_candidates = modelCandidates;
+    }
+    
+    console.log('🌐 [API] Calling trim-recommendation endpoint');
+    console.log('🌐 [API] Request body:', JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch(`${API_BASE_URL}/agents/trim-recommendation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        features,
-        model_candidates: modelCandidates,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get trim recommendations');
+      const errorText = await response.text();
+      console.error('❌ [API] Trim recommendation failed');
+      console.error('❌ [API] Status:', response.status);
+      console.error('❌ [API] Error:', errorText);
+      
+      try {
+        const error = JSON.parse(errorText);
+        throw new Error(error.detail || `Failed to get trim recommendations: ${response.status}`);
+      } catch {
+        throw new Error(`Failed to get trim recommendations: ${response.status} - ${errorText}`);
+      }
     }
 
     const data = await response.json();
+    console.log('✅ [API] Trim recommendation success:', data);
     return data;
   } catch (error) {
     console.error('Error getting trim recommendations:', error);
