@@ -1,3 +1,4 @@
+# FE can now call this when a user drags a “payment comfort” slider.
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any

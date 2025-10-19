@@ -187,7 +187,7 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/share/decode?token=$token" | Conver
 
 On macOS/Linux, use curl -X POST ... -H "Content-Type: application/json" -d '...' equivalents.
 
-## Architecture
+## Architecture (open code to see structure)
 [ Frontend (Vite/React) ]
         |
         v
