@@ -1,0 +1,51 @@
+{
+  "tools": [
+    {
+      "name": "get_financing_options",
+      "description": "Get loan vs lease financing options for any vehicle. Returns best loan and lease options with monthly payments, APR, terms, total costs, and a recommendation. Use when user asks about payments, financing, lease vs buy, or monthly costs.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "vehicle_name": {
+            "type": "string",
+            "description": "Full name of the vehicle including year if known (e.g., '2024 Toyota RAV4', 'Toyota Camry Hybrid', 'Toyota Highlander')"
+          },
+          "vehicle_price": {
+            "type": "number",
+            "description": "Total price of the vehicle in dollars as a number (e.g., 35000, 28000, 45000). Do not include commas."
+          },
+          "down_payment": {
+            "type": "number",
+            "description": "Down payment amount in dollars as a number (e.g., 5000, 3000, 8000). If user doesn't specify, use 5000 as default."
+          }
+        },
+        "required": ["vehicle_name", "vehicle_price", "down_payment"]
+      }
+    },
+    {
+      "name": "get_trim_recommendations",
+      "description": "Get Toyota trim and package recommendations based on desired features. Returns ranked list of Toyota trims that match the requirements, including packages and feature coverage. Use when user asks about features, trims, trim levels, packages, or specific vehicle capabilities.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of desired features as strings. Prefix features with 'must:' or '!:' for required features, 'nice:' for nice-to-have features, and 'avoid:' for features to exclude. Examples: ['must: AWD', 'Apple CarPlay', 'nice: panoramic roof', 'avoid: cloth seats']. Common features: AWD, Apple CarPlay, blind spot monitoring, adaptive cruise control, heated seats, ventilated seats, panoramic roof, leather seats, hybrid, wireless charging, lane keep assist."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional: Array of specific Toyota model names to limit the search. Examples: ['RAV4'], ['Highlander', 'Sequoia'], ['Camry']. If omitted, searches all Toyota models. Common models: RAV4, Highlander, Camry, Corolla, 4Runner, Tacoma, Tundra, Sienna, Prius, Sequoia, Avalon."
+          }
+        },
+        "required": ["features"]
+      }
+    }
+  ]
+}
+

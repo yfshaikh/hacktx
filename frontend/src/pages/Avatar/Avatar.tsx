@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { getSignedUrl } from '../../lib/api/elevenlabs';
 import { CarVRCard } from '../../components/CarVRCard';
 import type { VehicleScore } from '../../lib/types';
+import { useCardManager } from '../../lib/cardManager';
+import { getLoanOptions, getTrimRecommendations } from '../../lib/api/agents';
 
 function Avatar() {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -12,6 +14,9 @@ function Avatar() {
   const avatarToAnimate = useRef<any>(null);
   const ballsToAnimate = useRef<any>(null);
   const SPLINE_URL="https://prod.spline.design/uFrHM1KSZn46gTnk/scene.splinecode"
+  
+  // Card manager for displaying agent results
+  const { openCard } = useCardManager();
 
   function onLoad(spline: any) {
     const avatarObj = spline.findObjectByName('Avatar');
@@ -50,7 +55,7 @@ function Avatar() {
       
       // Call the backend API to search for the car
       const apiUrl = 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/agent-tools/search-car`, {
+      const response = await fetch(`${apiUrl}/agents/search-car`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,16 +148,95 @@ function Avatar() {
       setCarData(vehicleScore);
       setIsCarSidebarOpen(true);
       
-      // Return success message for the conversation context
-      return 'Car information displayed successfully';
+      // Return detailed message from backend for the conversation context
+      return result.message || 'Car information displayed successfully';
     } catch (error) {
       console.error('Error searching for car:', error);
       return `Failed to search for vehicle: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   };
 
+  // Client tool for getting financing options
+  const getFinancingOptions = async (parameters: any) => {
+    console.log('get_financing_options called with parameters:', parameters);
+    
+    try {
+      // ElevenLabs may nest parameters in a 'properties' field
+      const params = parameters.properties || parameters;
+      const { vehicle_name, vehicle_price, down_payment } = params;
+      
+      if (!vehicle_name || !vehicle_price || !down_payment) {
+        console.error('Missing required parameters for financing');
+        return "Error: Please provide vehicle_name, vehicle_price, and down_payment.";
+      }
+      
+      // Build the query message for the loan agent
+      const message = `
+        I'm looking at a ${vehicle_name} priced at $${vehicle_price}.
+        I can put $${down_payment} down.
+        Find me the best loan option and best lease option.
+      `;
+      
+      // Call the loan agent API
+      const result = await getLoanOptions(message);
+      
+      console.log('Loan agent result:', result);
+      
+      // Validate the result has the expected structure
+      if (!result || !result.best_loan || !result.best_lease) {
+        console.error('Invalid loan agent response:', result);
+        return `I got a response but it wasn't in the expected format. The backend may still be processing. Please try again.`;
+      }
+      
+      // Display in card
+      openCard('loan', result);
+      
+      // Return summary for conversation
+      return `For the ${vehicle_name}: Best loan is $${result.best_loan.monthly_payment.toFixed(2)}/month at ${result.best_loan.apr}% APR over ${result.best_loan.term_months} months. Best lease is $${result.best_lease.monthly_payment.toFixed(2)}/month. I recommend the ${result.recommendation} option because ${result.why}`;
+    } catch (error) {
+      console.error('Error getting financing options:', error);
+      return `Failed to get financing options: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  };
+
+  // Client tool for getting trim recommendations
+  const getTrimRecsForUser = async (parameters: any) => {
+    console.log('get_trim_recommendations called with parameters:', parameters);
+    
+    try {
+      // ElevenLabs may nest parameters in a 'properties' field
+      const params = parameters.properties || parameters;
+      const { features, models } = params;
+      
+      if (!features || !Array.isArray(features) || features.length === 0) {
+        console.error('Missing or invalid features parameter');
+        return "Error: Please provide an array of desired features.";
+      }
+      
+      // Call the trim recommendation agent API
+      const result = await getTrimRecommendations(features, models);
+      
+      // Display in card
+      openCard('trim', result);
+      
+      // Return summary for conversation
+      const topMatch = result.ranked_trims[0];
+      const featureList = topMatch.included_desired_features.slice(0, 3).join(', ');
+      const moreFeatures = topMatch.included_desired_features.length > 3 ? `, and ${topMatch.included_desired_features.length - 3} more` : '';
+      
+      return `I found ${result.ranked_trims.length} matching Toyota trims. Top match is the ${topMatch.year} ${topMatch.model} ${topMatch.trim}, which includes ${topMatch.included_desired_features.length} of your desired features: ${featureList}${moreFeatures}.`;
+    } catch (error) {
+      console.error('Error getting trim recommendations:', error);
+      return `Failed to get trim recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  };
+
   const conversation = useConversation({
-    clientTools: { search_car: displayCarInfo },
+    clientTools: { 
+      search_car: displayCarInfo,
+      get_financing_options: getFinancingOptions,
+      get_trim_recommendations: getTrimRecsForUser
+    },
     onConnect: () => {
       setIsConnecting(false);
       // Trigger listening animation when connected

@@ -8,8 +8,21 @@ from utils.initialize_supabase import get_supabase_client
 from typing import Optional
 import json
 
-router = APIRouter(prefix="/api/agent-tools", tags=["agent-tools"])
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+import logging
+import json
 
+
+from ai_agents.loanAgent import run_auto_finance_agent, FinancingOptions
+from ai_agents.trimRecAgent import trim_mapper, TrimRankingOutput
+from agents import Runner
+
+logger = logging.getLogger(__name__)
+
+
+agent_router = APIRouter(prefix="/agents", tags=["agents"])
 
 class SearchCarRequest(BaseModel):
     make: str
@@ -20,8 +33,22 @@ class SearchCarRequest(BaseModel):
     minMpg: Optional[int] = None  # Minimum combined MPG
     maxPrice: Optional[int] = None  # Maximum MSRP
 
+class LoanAgent(BaseModel):
+    """Request model for loan agent"""
+    user_message: str
+    model: Optional[str] = "gpt-4o-mini"
 
-@router.post("/search-car")
+class TrimRecAgent(BaseModel):
+    
+    features: List[str]
+    model_candidates: Optional[List[str]]
+
+class ErrorResponse(BaseModel):
+    error: str
+    detail: Optional[str] = None
+    status_code: int
+
+@agent_router.post("/search-car")
 async def search_car_tool(request: SearchCarRequest):
     """
     Server-side tool for voice agent to search for a car by make/model
@@ -59,11 +86,39 @@ async def search_car_tool(request: SearchCarRequest):
         vehicle = result.data[0]
         formatted_vehicle = format_scraped_car(vehicle)
         
+        # Build detailed message for the agent with key information
+        year = formatted_vehicle.get('year', 'N/A')
+        make = formatted_vehicle.get('make', 'N/A')
+        model = formatted_vehicle.get('model', 'N/A')
+        msrp = formatted_vehicle.get('msrp')
+        horsepower = formatted_vehicle.get('horsepower')
+        seating = formatted_vehicle.get('seatingCapacity')
+        drivetrain = formatted_vehicle.get('drivetrain')
+        body_style = formatted_vehicle.get('bodyStyle')
+        mpg = formatted_vehicle.get('combinedMpgForFuelType1')
+        
+        # Create informative message with all key details
+        message_parts = [f"Found {year} {make} {model}"]
+        if msrp:
+            message_parts.append(f"Price: ${msrp:,}")
+        if horsepower:
+            message_parts.append(f"Horsepower: {horsepower}")
+        if seating:
+            message_parts.append(f"Seating: {seating}")
+        if drivetrain:
+            message_parts.append(f"Drivetrain: {drivetrain}")
+        if body_style:
+            message_parts.append(f"Body Style: {body_style}")
+        if mpg:
+            message_parts.append(f"MPG: {mpg}")
+        
+        message_parts.append("Displaying with real photos from cars.com.")
+        
         # Return as JSON string for the agent to pass to client tool
         return {
             "success": True,
             "carData": json.dumps(formatted_vehicle),
-            "message": f"Found {formatted_vehicle.get('year')} {formatted_vehicle.get('make')} {formatted_vehicle.get('model')}. Displaying with real photos."
+            "message": " | ".join(message_parts)
         }
     
     except Exception as e:
@@ -73,5 +128,80 @@ async def search_car_tool(request: SearchCarRequest):
             "carData": None
         }
 
+@agent_router.post(
+    "/loan",
+    response_model=Dict[str, Any],
+    summary="Get Auto Financing Options",
+    description="Analyze financing options for a vehicle. Returns best loan and lease options based on user's query."
+)
+async def get_loan_options(request: LoanAgent):
+    
+    try:
+        logger.info(f"Processing loan agent request: {request.user_message[:100]}...")
+        
+        # Run the loan agent
+        result = run_auto_finance_agent(
+            user_message=request.user_message,
+            model=request.model
+        )
+        
+        # Handle different return types
+        if isinstance(result, FinancingOptions):
+            return result.model_dump()
+        elif isinstance(result, str):
+            # If agent returned a string (error or raw response)
+            try:
+                # Try to parse as JSON
+                return json.loads(result)
+            except json.JSONDecodeError:
+                # Return as message
+                return {"message": result}
+        else:
+            return result
+            
+    except Exception as e:
+        logger.error(f"Error in loan agent: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process loan agent request: {str(e)}"
+        )
+
+
+@agent_router.post(
+    "/trim-recommendation",
+    response_model=Dict[str, Any],
+    summary="Get Toyota Trim Recommendations",
+    description="Get ranked Toyota trim and package recommendations based on desired features"
+)
+async def get_trim_recommendations(request: TrimRecAgent):
+ 
+    try:
+        logger.info(f"Processing trim recommendation request with {len(request.features)} features")
+        
+        # Prepare input for the agent
+        agent_input = {
+            "features": request.features
+        }
+        
+        if request.model_candidates:
+            agent_input["model_candidates"] = request.model_candidates
+        
+        # Run the trim mapper agent (async)
+        result = await Runner.run(
+            trim_mapper, 
+            input=json.dumps(agent_input)
+        )
+        
+        # Extract the structured output
+        final_output = result.final_output_as(TrimRankingOutput)
+        
+        return final_output.model_dump()
+            
+    except Exception as e:
+        logger.error(f"Error in trim recommendation agent: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process trim recommendation request: {str(e)}"
+        )
 
 

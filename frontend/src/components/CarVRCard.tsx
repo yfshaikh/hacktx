@@ -22,12 +22,17 @@ interface CarVRCardProps {
   car: VehicleScore | null;
   isOpen: boolean;
   onClose: () => void;
+  position?: number; // Position index for stacking
 }
 
-export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
+export function CarVRCard({ car, isOpen, onClose, position = 0 }: CarVRCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!car) return null;
+
+  // Calculate offset based on position to prevent overlap
+  const offsetY = position * 100; // Vertical offset
+  const offsetX = position * 20; // Slight horizontal offset
 
   // Check if car has images
   const hasImages = car.vehicle.images && Object.keys(car.vehicle.images).length > 0;
@@ -39,7 +44,8 @@ export function CarVRCard({ car, isOpen, onClose }: CarVRCardProps) {
           initial={{ opacity: 0, x: 150, scale: 0.85, rotateY: 25 }}
           animate={{ 
             opacity: 1, 
-            x: 0, 
+            x: offsetX, 
+            y: offsetY,
             scale: isExpanded ? 1 : 0.92,
             rotateY: isExpanded ? 0 : 12
           }}
