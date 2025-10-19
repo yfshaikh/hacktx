@@ -7,6 +7,7 @@ import os
 from routes.eleven_routes import eleven_router
 from routes.car_routes import router as car_router
 from routes.agent_tools import agent_router as agent_tools_router
+from routes.nessie_routes import nessie_router
 from utils.initialize_supabase import get_supabase_client
 
 # Configure logging
@@ -44,6 +45,7 @@ except Exception as e:
 app.include_router(eleven_router)
 app.include_router(car_router)
 app.include_router(agent_tools_router)
+app.include_router(nessie_router)
 
 
 
