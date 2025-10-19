@@ -63,3 +63,31 @@ export async function getCustomers(limit: number = 5) {
   return response.json();
 }
 
+/**
+ * Get financial summary for a user by user ID (backend fetches Capital One ID from profile)
+ */
+export async function getUserBankSummary(userId: string): Promise<NessieSummary> {
+  const response = await fetch(`${API_BASE_URL}/nessie/user-summary/${userId}`);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorData.detail || `Failed to fetch bank summary: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
+/**
+ * Get savings tips for a user by user ID (backend fetches Capital One ID from profile)
+ */
+export async function getUserSavingsTips(userId: string, topN: number = 6): Promise<SavingsTips> {
+  const response = await fetch(`${API_BASE_URL}/nessie/user-tips/${userId}?top_n=${topN}`);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorData.detail || `Failed to fetch savings tips: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+

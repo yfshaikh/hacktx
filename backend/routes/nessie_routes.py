@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Tuple, Optional
 import os, httpx, logging, time
 from statistics import pstdev
+from utils.initialize_supabase import supabase
 
 log = logging.getLogger("nessie")
 nessie_router = APIRouter(prefix="/nessie")
@@ -36,10 +37,12 @@ class NessieSummaryOut(BaseModel):
 # ---------------- Helpers ----------------
 def _api() -> Tuple[str, Optional[str]]:
     base = os.getenv("NESSIE_BASE", "https://api.nessieisreal.com")
-    key = os.getenv("NESSIE_API_KEY")  # may be None in DEV
+    key = os.getenv("NESSIE_API_KEY")
     return base, key
 
+# ---------------- Mock/Demo Data (fallback when API fails) ----------------
 def _demo_customers():
+    """Mock customer data for testing/fallback"""
     return [
         {"_id": "demo_customer_1", "first_name": "Demo", "last_name": "User"},
         {"_id": "demo_customer_2", "first_name": "Alex", "last_name": "Park"},
@@ -47,14 +50,22 @@ def _demo_customers():
     ]
 
 def _demo_summary(customer_id: str):
+    """Mock financial summary for testing/fallback"""
     return {
         "customer_id": customer_id,
-        "monthly_inflow": 6000.0,
-        "monthly_outflow": 2500.0,
-        "monthly_outflow_std": 300.0,
-        "recurring_bills": 800.0,
-        "categories": {"rent": 1500.0, "groceries": 400.0, "utilities": 200.0, "fuel": 120.0},
-        "sample_tx_count": 42,
+        "monthly_inflow": 6500.0,
+        "monthly_outflow": 3200.0,
+        "monthly_outflow_std": 450.0,
+        "recurring_bills": 950.0,
+        "categories": {
+            "rent": 1800.0,
+            "groceries": 550.0,
+            "utilities": 250.0,
+            "fuel": 180.0,
+            "restaurants": 320.0,
+            "entertainment": 150.0
+        },
+        "sample_tx_count": 87,
     }
 
 # ---------------- Routes ----------------
@@ -62,15 +73,27 @@ def _demo_summary(customer_id: str):
 def ping():
     return {"ok": True}
 
+@nessie_router.get("/config")
+def config():
+    """Check Nessie API configuration (without exposing the actual key)"""
+    base, key = _api()
+    return {
+        "base_url": base,
+        "api_key_configured": key is not None and len(key) > 0,
+        "api_key_length": len(key) if key else 0,
+    }
+
 @nessie_router.get("/customers")
 async def customers(limit: int = 5):
     base, key = _api()
-    if not key or os.getenv("DEV_MODE") == "1":
+    if not key:
+        log.warning("Nessie API key not configured, using demo data")
         return _demo_customers()[:limit]
 
     ck = f"customers:{limit}"
     c = _cache_get(ck)
     if c: return c
+    
     try:
         async with httpx.AsyncClient(timeout=25.0) as client:
             r = await client.get(f"{base}/customers", params={"key": key})
@@ -82,13 +105,23 @@ async def customers(limit: int = 5):
             _cache_set(ck, out)
             return out
     except Exception as e:
-        log.warning(f"Nessie customers fallback due to error: {e}")
+        log.warning(f"Nessie customers error, falling back to demo data: {e}")
         return _demo_customers()[:limit]
 
 @nessie_router.get("/summary/{customer_id}", response_model=NessieSummaryOut)
 async def summary(customer_id: str):
+    """
+    Get financial summary for a Capital One customer.
+    
+    Args:
+        customer_id: The Capital One customer ID (from Nessie API)
+        
+    Note: This endpoint expects a Capital One customer ID, NOT a user ID.
+    Use /user-summary/{user_id} to automatically look up the Capital One ID from the user's profile.
+    """
     base, key = _api()
-    if not key or os.getenv("DEV_MODE") == "1":
+    if not key:
+        log.warning(f"Nessie API key not configured, returning demo data for customer {customer_id}")
         return _demo_summary(customer_id)
 
     ck = f"summary:{customer_id}"
@@ -96,15 +129,28 @@ async def summary(customer_id: str):
     if c: return c
 
     try:
+        log.info(f"Calling Nessie API: {base}/customers/{customer_id}/accounts")
         async with httpx.AsyncClient(timeout=25.0) as client:
-            # 1) Accounts
-            r = await client.get(f"{base}/customers/{customer_id}/accounts", params={"key": key})
-            r.raise_for_status()
-            accounts = r.json()
+            # 1) Get accounts for this customer - Nessie API endpoint
+            # Docs: GET /customers/{customerId}/accounts?key={apiKey}
+            try:
+                r = await client.get(f"{base}/customers/{customer_id}/accounts", params={"key": key})
+                r.raise_for_status()
+                accounts = r.json()
+                log.info(f"Retrieved {len(accounts) if isinstance(accounts, list) else 0} accounts for customer {customer_id}")
+            except httpx.ConnectError as e:
+                log.warning(f"Connection failed to Nessie API at {base}, falling back to demo data: {e}")
+                return _demo_summary(customer_id)
+            except httpx.HTTPStatusError as e:
+                log.warning(f"Nessie API returned error for customer {customer_id}, falling back to demo data: {e.response.status_code}")
+                return _demo_summary(customer_id)
+            
             if not isinstance(accounts, list):
-                raise ValueError("Unexpected accounts payload")
+                log.warning(f"Unexpected accounts payload format, falling back to demo data")
+                return _demo_summary(customer_id)
 
-            # 2) Transactions across accounts
+            # 2) Get transactions across all accounts - Nessie API endpoint
+            # Docs: GET /accounts/{accountId}/transactions?key={apiKey}
             txs: List[Dict[str, Any]] = []
             for acc in accounts:
                 acc_id = acc.get("_id")
@@ -115,6 +161,8 @@ async def summary(customer_id: str):
                 part = t.json()
                 if isinstance(part, list):
                     txs.extend(part)
+            
+            log.info(f"Retrieved {len(txs)} total transactions across {len(accounts)} accounts")
 
         # Aggregate (simple heuristics)
         inflows: List[float] = []
@@ -160,7 +208,7 @@ async def summary(customer_id: str):
         _cache_set(ck, out)
         return out
     except Exception as e:
-        log.warning(f"Nessie summary fallback for {customer_id} due to error: {e}")
+        log.warning(f"Unexpected error for customer {customer_id}, falling back to demo data: {e}")
         return _demo_summary(customer_id)
 
 # ---------------- Savings Tips from Spend ----------------
@@ -169,8 +217,13 @@ from typing import List
 @nessie_router.get("/tips/{customer_id}")
 async def tips(customer_id: str, top_n: int = 6):
     """
-    Turn category spend into actionable monthly savings tips.
+    Turn category spend into actionable monthly savings tips for a Capital One customer.
     Uses simple % trims per category and adds a 'recurring bills' nudge.
+    
+    Args:
+        customer_id: The Capital One customer ID (from Nessie API)
+        top_n: Number of top savings tips to return
+        
     Returns:
       {
         customer_id,
@@ -179,6 +232,9 @@ async def tips(customer_id: str, top_n: int = 6):
           { category, current_monthly, suggested_reduction_pct, estimated_savings, suggestion }
         ]
       }
+      
+    Note: This endpoint expects a Capital One customer ID, NOT a user ID.
+    Use /user-tips/{user_id} to automatically look up the Capital One ID from the user's profile.
     """
     ck = f"tips:{customer_id}:{top_n}"
     cached = _cache_get(ck)
@@ -263,3 +319,130 @@ async def tips(customer_id: str, top_n: int = 6):
     }
     _cache_set(ck, out)
     return out
+
+# ---------------- User-based endpoints (fetch Capital One ID from profile) ----------------
+
+async def _get_capital_one_id(user_id: str) -> str:
+    """
+    Fetch the Capital One customer ID from the profiles table.
+    
+    This is the key function that bridges our internal user IDs with Capital One customer IDs.
+    It queries the profiles table to get the capital_one_id that is used for all Nessie API calls.
+    
+    Args:
+        user_id: The internal user ID (UUID from auth.users table)
+        
+    Returns:
+        str: The Capital One customer ID (used in Nessie API calls)
+        
+    Raises:
+        HTTPException 404: If user profile not found in database
+        HTTPException 400: If Capital One account not linked (capital_one_id field is null)
+        HTTPException 500: If database query fails
+    """
+    try:
+        # Query profiles table for this user's Capital One customer ID
+        log.info(f"Looking up Capital One ID for user {user_id}")
+        response = supabase.table("profiles").select("capital_one_id").eq("id", user_id).single().execute()
+        
+        if not response.data:
+            log.warning(f"No profile found for user {user_id}")
+            raise HTTPException(
+                status_code=404,
+                detail="Profile not found. Please make sure you're logged in."
+            )
+        
+        capital_one_id = response.data.get("capital_one_id")
+        
+        if not capital_one_id:
+            log.warning(f"User {user_id} has no Capital One ID linked")
+            raise HTTPException(
+                status_code=400,
+                detail="Capital One account not linked. Please link your account in settings."
+            )
+        
+        log.info(f"Found Capital One ID for user {user_id}: {capital_one_id}")
+        return capital_one_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error fetching profile for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch user profile"
+        )
+
+@nessie_router.get("/debug/user-profile/{user_id}")
+async def debug_user_profile(user_id: str):
+    """
+    Debug endpoint to check if a user has a Capital One ID configured.
+    This does NOT call the Nessie API, just checks the database.
+    """
+    try:
+        response = supabase.table("profiles").select("id, capital_one_id").eq("id", user_id).single().execute()
+        
+        if not response.data:
+            return {
+                "user_id": user_id,
+                "profile_exists": False,
+                "capital_one_id": None,
+                "capital_one_id_configured": False
+            }
+        
+        capital_one_id = response.data.get("capital_one_id")
+        return {
+            "user_id": user_id,
+            "profile_exists": True,
+            "capital_one_id": capital_one_id,
+            "capital_one_id_configured": capital_one_id is not None and len(capital_one_id) > 0
+        }
+    except Exception as e:
+        log.error(f"Error fetching profile for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch user profile: {str(e)}"
+        )
+
+@nessie_router.get("/user-summary/{user_id}", response_model=NessieSummaryOut)
+async def user_summary(user_id: str):
+    """
+    Get financial summary for a user by looking up their Capital One ID from their profile.
+    
+    This endpoint:
+    1. Queries the profiles table for the user's capital_one_id
+    2. Uses that capital_one_id to fetch data from the Nessie API
+    3. Returns aggregated financial data
+    
+    Args:
+        user_id: The internal user ID (UUID from auth.users table)
+        
+    Raises:
+        404: If user profile not found
+        400: If Capital One account not linked (capital_one_id is null)
+        500: If Nessie API call fails
+    """
+    capital_one_id = await _get_capital_one_id(user_id)
+    log.info(f"Fetching summary for user {user_id} with Capital One ID: {capital_one_id}")
+    return await summary(capital_one_id)
+
+@nessie_router.get("/user-tips/{user_id}")
+async def user_tips(user_id: str, top_n: int = 6):
+    """
+    Get savings tips for a user by looking up their Capital One ID from their profile.
+    
+    This endpoint:
+    1. Queries the profiles table for the user's capital_one_id
+    2. Uses that capital_one_id to fetch financial data from the Nessie API
+    3. Analyzes spending patterns and returns personalized savings tips
+    
+    Args:
+        user_id: The internal user ID (UUID from auth.users table)
+        top_n: Number of top savings tips to return (default: 6)
+        
+    Raises:
+        404: If user profile not found
+        400: If Capital One account not linked (capital_one_id is null)
+        500: If Nessie API call fails
+    """
+    capital_one_id = await _get_capital_one_id(user_id)
+    return await tips(capital_one_id, top_n)
