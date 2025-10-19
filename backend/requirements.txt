@@ -4,3 +4,5 @@ pydantic
 supabase
 python-dotenv
 PyJWT
+openai
+openai-agents
