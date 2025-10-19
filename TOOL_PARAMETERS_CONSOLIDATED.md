@@ -1,10 +1,79 @@
-# 🔧 Agent Tools Configuration for ElevenLabs
+# 🔧 Complete Tool Configuration for ElevenLabs
 
-This document provides the exact parameters needed to configure the agent tools with ElevenLabs or other AI platforms.
+This document provides the exact parameters needed to configure all agent tools with ElevenLabs or other AI platforms.
 
 ---
 
-## Tool 1: `get_financing_options`
+## Tool 1: `search_car`
+
+### Description
+Search and display Toyota vehicles from 2015-2020 with real photos from cars.com. Shows detailed specs, pricing, and multiple high-quality images that users can drag through.
+
+### Parameters Schema
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "make": {
+      "type": "string",
+      "description": "Car manufacturer (always 'Toyota')",
+      "example": "Toyota"
+    },
+    "model": {
+      "type": "string",
+      "description": "Model name like Camry, Prius, RAV4, Tacoma, Highlander, 4Runner, Corolla, Tundra, Sienna, Sequoia, Avalon",
+      "example": "Camry"
+    },
+    "year": {
+      "type": "string",
+      "description": "Optional: Model year from 2015-2020. If not specified, returns the newest available year.",
+      "example": "2018"
+    }
+  },
+  "required": ["make", "model"]
+}
+```
+
+### Return Value
+Displays vehicle with real photos on user's screen. Returns formatted message for conversation.
+
+### Data Coverage
+- **Years**: 2015-2020 Toyota vehicles
+- **Images**: 100% - All vehicles have 20-40+ real photos from cars.com
+- **Pricing**: 100% - All vehicles have MSRP
+- **Specs**: 100% - Horsepower, seating, dimensions, drivetrain, body style, MPG
+
+### Example Use Cases
+
+#### Basic Search
+```
+User: "Show me a Camry"
+Tool Call: search_car(make="Toyota", model="Camry")
+```
+
+#### Specific Year
+```
+User: "Show me a 2018 RAV4"
+Tool Call: search_car(make="Toyota", model="RAV4", year="2018")
+```
+
+#### SUV Request
+```
+User: "Show me a 4Runner"
+Tool Call: search_car(make="Toyota", model="4Runner")
+```
+
+### Available Models
+- **Sedans**: Camry, Corolla, Avalon
+- **SUVs**: RAV4, 4Runner, Highlander, Sequoia
+- **Trucks**: Tacoma, Tundra
+- **Hybrids**: Prius, Camry Hybrid, RAV4 Hybrid, Highlander Hybrid
+- **Minivan**: Sienna
+
+---
+
+## Tool 2: `get_financing_options`
 
 ### Description
 Get loan vs lease financing options for any vehicle. Returns best loan and lease options with monthly payments, APR, terms, total costs, and a recommendation.
@@ -65,7 +134,7 @@ Get loan vs lease financing options for any vehicle. Returns best loan and lease
 
 ### Example Use Cases
 
-#### 1. Basic Financing Query
+#### Basic Financing Query
 ```
 User: "How much would a RAV4 cost per month?"
 Tool Call:
@@ -76,7 +145,7 @@ Tool Call:
   )
 ```
 
-#### 2. Lease vs Buy Question
+#### Lease vs Buy Question
 ```
 User: "Should I lease or buy a Camry for $28,000?"
 Tool Call:
@@ -87,7 +156,7 @@ Tool Call:
   )
 ```
 
-#### 3. Specific Down Payment
+#### Specific Down Payment
 ```
 User: "What's the monthly payment on a $45,000 Highlander if I put $8,000 down?"
 Tool Call:
@@ -107,7 +176,7 @@ Tool Call:
 
 ---
 
-## Tool 2: `get_trim_recommendations`
+## Tool 3: `get_trim_recommendations`
 
 ### Description
 Get Toyota trim and package recommendations based on desired features. Returns ranked list of Toyota trims that best match the user's requirements, including official packages and feature coverage.
@@ -188,7 +257,7 @@ Get Toyota trim and package recommendations based on desired features. Returns r
 
 ### Example Use Cases
 
-#### 1. Basic Feature Search
+#### Basic Feature Search
 ```
 User: "I need a Toyota with AWD and Apple CarPlay"
 Tool Call:
@@ -197,7 +266,7 @@ Tool Call:
   )
 ```
 
-#### 2. Model-Specific Search
+#### Model-Specific Search
 ```
 User: "Which RAV4 trim has heated seats and a sunroof?"
 Tool Call:
@@ -207,7 +276,7 @@ Tool Call:
   )
 ```
 
-#### 3. Complex Requirements
+#### Complex Requirements
 ```
 User: "I want a hybrid with leather seats but no cloth interior"
 Tool Call:
@@ -216,7 +285,7 @@ Tool Call:
   )
 ```
 
-#### 4. Safety Features
+#### Safety Features
 ```
 User: "Show me Highlanders with all the safety features"
 Tool Call:
@@ -231,16 +300,6 @@ Tool Call:
   )
 ```
 
-#### 5. Multi-Model Comparison
-```
-User: "Which Toyota SUV has ventilated seats and wireless charging?"
-Tool Call:
-  get_trim_recommendations(
-    features=["ventilated seats", "wireless charging"],
-    models=["RAV4", "Highlander", "4Runner"]
-  )
-```
-
 ### What the Tool Does
 1. Searches official Toyota specifications and packages
 2. Maps user features to actual Toyota trim levels
@@ -251,7 +310,7 @@ Tool Call:
 
 ---
 
-## Tool 3: `get_bank_info`
+## Tool 4: `get_bank_info`
 
 ### Description
 Get the user's financial information including monthly income, expenses, spending categories, and personalized savings tips from their linked Capital One account via the Nessie API.
@@ -312,7 +371,7 @@ The underlying data structure includes:
 
 ### Example Use Cases
 
-#### 1. Check Affordability
+#### Check Affordability
 ```
 User: "Can I afford a new car?"
 Tool Call:
@@ -320,7 +379,7 @@ Tool Call:
 Response: "You have monthly income of $6,000 and expenses of $2,500, leaving $3,500. With savings tips, you could free up another $150/month!"
 ```
 
-#### 2. Budget Check
+#### Budget Check
 ```
 User: "What's my budget like?"
 Tool Call:
@@ -328,7 +387,7 @@ Tool Call:
 Response: "Your monthly income is $6,000 with expenses of $2,500 (±$300). Top categories: rent ($1,500), groceries ($400), utilities ($200)."
 ```
 
-#### 3. Savings Advice
+#### Savings Advice
 ```
 User: "How can I save money?"
 Tool Call:
@@ -336,7 +395,7 @@ Tool Call:
 Response: "I can help you save about $150/month! For example, trim groceries by 5% to save ~$20/mo."
 ```
 
-#### 4. Combined with Vehicle Search
+#### Combined with Vehicle Search
 ```
 User: "What car can I afford?"
 1. get_bank_info(include_savings_tips=false)
@@ -368,13 +427,35 @@ If user hasn't linked their Capital One account:
 
 ---
 
-## Tool Integration Examples
+## ElevenLabs Client Tools Configuration
 
-### ElevenLabs Client Tools Configuration
+### Complete JavaScript Configuration
 
 ```javascript
 const clientTools = {
   tools: [
+    {
+      name: 'search_car',
+      description: 'Search and display Toyota vehicles from 2015-2020 with real photos. Shows specs, pricing, and multiple images.',
+      parameters: {
+        type: 'object',
+        properties: {
+          make: {
+            type: 'string',
+            description: 'Car manufacturer (always "Toyota")',
+          },
+          model: {
+            type: 'string',
+            description: 'Model name like Camry, Prius, RAV4, Tacoma, Highlander, etc.',
+          },
+          year: {
+            type: 'string',
+            description: 'Optional: Model year from 2015-2020',
+          },
+        },
+        required: ['make', 'model'],
+      },
+    },
     {
       name: 'get_financing_options',
       description: 'Get loan vs lease financing options for a vehicle. Returns monthly payments, APR, terms, and recommendations.',
@@ -433,91 +514,8 @@ const clientTools = {
     },
   ],
   handler: async (toolName, parameters) => {
-    // Tool implementation here
-    // See: frontend/src/pages/Avatar/Avatar.tsx
+    // Tool implementation - See: frontend/src/pages/Avatar/Avatar.tsx
   },
-};
-```
-
-### Tool Handler Implementation
-
-```typescript
-import { getLoanOptions, getTrimRecommendations } from './lib/api/agents';
-import { getBankSummary, getSavingsTips } from './lib/api/nessie';
-import { useCardManager } from './lib/cardManager';
-import { useAuth } from './context/auth-context';
-
-const handleToolCall = async (toolName: string, parameters: any) => {
-  const { openCard } = useCardManager();
-  const { profile } = useAuth();
-
-  if (toolName === 'get_financing_options') {
-    const { vehicle_name, vehicle_price, down_payment } = parameters;
-    const message = `
-      I'm looking at a ${vehicle_name} priced at $${vehicle_price}.
-      I can put $${down_payment} down.
-      Find me the best loan option and best lease option.
-    `;
-    const result = await getLoanOptions(message);
-    openCard('loan', result);
-    
-    return {
-      success: true,
-      message: `Best loan: $${result.best_loan.monthly_payment}/mo. Best lease: $${result.best_lease.monthly_payment}/mo. ${result.why}`,
-      data: result,
-    };
-  }
-
-  if (toolName === 'get_trim_recommendations') {
-    const { features, models } = parameters;
-    const result = await getTrimRecommendations(features, models);
-    openCard('trim', result);
-    
-    const topMatch = result.ranked_trims[0];
-    return {
-      success: true,
-      message: `Best match: ${topMatch.year} ${topMatch.model} ${topMatch.trim} with ${topMatch.included_desired_features.length} matching features.`,
-      data: result,
-    };
-  }
-
-  if (toolName === 'get_bank_info') {
-    // Check if user has Capital One account linked
-    if (!profile?.capital_one_id) {
-      return {
-        success: false,
-        message: "I don't have your Capital One account linked yet. Please link your account in settings to view your financial information.",
-      };
-    }
-
-    const { include_savings_tips = true } = parameters;
-    
-    // Fetch bank summary
-    const summary = await getBankSummary(profile.capital_one_id);
-    
-    // Build response
-    let message = `You have a monthly income of $${summary.monthly_inflow.toFixed(2)} and monthly expenses of $${summary.monthly_outflow.toFixed(2)} (±$${summary.monthly_outflow_std.toFixed(2)}). `;
-    
-    const topCategories = Object.entries(summary.categories).slice(0, 3);
-    if (topCategories.length > 0) {
-      const categoryList = topCategories.map(([cat, amt]) => `${cat} ($${amt.toFixed(2)})`).join(', ');
-      message += `Top spending: ${categoryList}. `;
-    }
-    
-    // Optionally include savings tips
-    if (include_savings_tips) {
-      const tips = await getSavingsTips(profile.capital_one_id, 3);
-      if (tips.tips.length > 0) {
-        message += `I can help you save about $${tips.estimated_monthly_savings.toFixed(2)}/month. ${tips.tips[0].suggestion}`;
-      }
-    }
-    
-    return {
-      success: true,
-      message,
-      data: { summary, ...(include_savings_tips && { tips: await getSavingsTips(profile.capital_one_id, 3) }) },
-    };
-  }
 };
 ```
 
@@ -526,7 +524,7 @@ const handleToolCall = async (toolName: string, parameters: any) => {
 ## Important Notes
 
 ### 1. Visual Feedback
-Both tools display results in **dynamic UI cards** on the right side of the screen:
+All tools display results in **dynamic UI cards** on the right side of the screen:
 - Cards appear automatically when tools are called
 - Users can expand cards for full details
 - Multiple cards can be open simultaneously
@@ -540,6 +538,7 @@ The **trim tool** accepts natural language feature descriptions:
 - "adaptive cruise" ✅ (normalized to "adaptive cruise control")
 
 ### 3. Data Sources
+- **Search Car Tool**: Scraped data from cars.com with real photos (2015-2020)
 - **Loan Tool**: Uses industry-standard calculations for loans/leases
 - **Trim Tool**: Searches official Toyota specifications and dealer websites
 - **Bank Tool**: Retrieves real financial data from Capital One via Nessie API
@@ -547,9 +546,10 @@ The **trim tool** accepts natural language feature descriptions:
 
 ### 4. Error Handling
 Tools may return errors if:
-- Backend is not running (check `http://localhost:8000/agents/`)
+- Backend is not running (check `http://localhost:8000/`)
 - Invalid parameters provided
 - Network issues
+- User hasn't linked Capital One account (for bank tool)
 
 Always wrap tool calls in try-catch blocks:
 ```typescript
@@ -563,6 +563,7 @@ try {
 ```
 
 ### 5. Performance
+- **Search Car Tool**: Fast (~1-2 seconds) - database lookup
 - **Loan Tool**: Fast (~1-2 seconds) - pure calculation
 - **Trim Tool**: Slower (~5-10 seconds) - does web searches to verify features
 - **Bank Tool**: Fast (~1-2 seconds) - cached data with 15-minute TTL
@@ -579,6 +580,15 @@ try {
 
 ### Direct API Testing
 ```bash
+# Test Car Search
+curl -X POST http://localhost:8000/agents/search-car \
+  -H "Content-Type: application/json" \
+  -d '{
+    "make": "Toyota",
+    "model": "Camry",
+    "year": "2018"
+  }'
+
 # Test Loan Agent
 curl -X POST http://localhost:8000/agents/loan \
   -H "Content-Type: application/json" \
@@ -604,48 +614,21 @@ curl http://localhost:8000/nessie/tips/demo_customer_1?top_n=5
 
 ---
 
-## Available Toyota Models
-
-Common models for the `models` parameter in trim tool:
-
-### Sedans
-- Camry, Corolla, Avalon
-
-### SUVs
-- RAV4, 4Runner, Highlander, Sequoia
-
-### Trucks
-- Tacoma, Tundra
-
-### Hybrids
-- Prius, Camry Hybrid, RAV4 Hybrid, Highlander Hybrid
-
-### Minivan
-- Sienna
-
----
-
-## Support & Documentation
-
-- **Quick Start**: See `AGENT_TOOLS_QUICKSTART.md`
-- **Full Usage Guide**: See `AGENT_TOOLS_USAGE.md`
-- **System Prompts**: See `AGENT_TOOLS_SYSTEM_PROMPT.txt`
-- **Integration Examples**: See `frontend/src/pages/Avatar/components/AgentToolsExample.tsx`
-
----
-
 ## Default Values (for convenience)
 
 When users don't specify all values:
 
 | Parameter | Default | Reasoning |
 |-----------|---------|-----------|
+| `year` | Most recent available | Return newest model |
 | `down_payment` | $5,000 | Typical 10-15% down |
 | `models` | All Toyota models | Search everything |
 | Feature prefix | Regular preference | Not required, not avoided |
 | `include_savings_tips` | `true` | Users usually want savings advice |
 
 Example: If user says "How much is a RAV4 per month?" without mentioning down payment, assume $5,000 down payment.
+
+---
 
 ## Prerequisites
 
@@ -654,4 +637,21 @@ Example: If user says "How much is a RAV4 per month?" without mentioning down pa
 2. Set the `capital_one_id` field in the `profiles` table
 3. The Nessie API must be accessible (demo mode available if unavailable)
 4. Environment variable `NESSIE_API_KEY` should be set (optional for demo mode)
+
+### For All Tools
+- Backend server must be running on `http://localhost:8000`
+- Frontend must be running on `http://localhost:5173`
+- User must be authenticated (for bank info)
+
+---
+
+## Support & Documentation
+
+- **System Prompt**: See `SYSTEM_PROMPT.txt`
+- **Integration Examples**: See `frontend/src/pages/Avatar/Avatar.tsx`
+- **API Routes**: See `backend/routes/` and `backend/main.py`
+
+---
+
+**Remember**: All tools work together to provide a comprehensive car buying experience with real data, accurate calculations, and personalized financial insights!
 

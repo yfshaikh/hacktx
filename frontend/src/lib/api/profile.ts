@@ -2,6 +2,9 @@ import { supabase } from '@/supabaseClient';
 
 export interface UserProfile {
   id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   capital_one_id?: string;
   created_at?: string;
   updated_at?: string;

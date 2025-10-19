@@ -6,6 +6,8 @@ import { CarVRCard } from '../../components/CarVRCard';
 import type { VehicleScore } from '../../lib/types';
 import { useCardManager } from '../../lib/cardManager';
 import { getLoanOptions, getTrimRecommendations } from '../../lib/api/agents';
+import { getBankSummary, getSavingsTips } from '../../lib/api/nessie';
+import { useAuth } from '../../context/auth-context';
 
 function Avatar() {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -14,6 +16,9 @@ function Avatar() {
   const avatarToAnimate = useRef<any>(null);
   const ballsToAnimate = useRef<any>(null);
   const SPLINE_URL="https://prod.spline.design/uFrHM1KSZn46gTnk/scene.splinecode"
+  
+  // Get auth context for user profile
+  const { profile } = useAuth();
   
   // Card manager for displaying agent results
   const { openCard } = useCardManager();
@@ -231,11 +236,63 @@ function Avatar() {
     }
   };
 
+  // Client tool for getting bank/financial information
+  const getBankInfo = async (parameters: any) => {
+    console.log('get_bank_info called with parameters:', parameters);
+    
+    try {
+      // Check if user has a Capital One ID in their profile
+      if (!profile?.capital_one_id) {
+        return "I don't have your Capital One account linked yet. Please link your account in settings to view your financial information.";
+      }
+      
+      // Optionally accept parameters to determine what info to fetch
+      const params = parameters.properties || parameters;
+      const includeSavingsTips = params.include_savings_tips !== false; // default true
+      
+      // Fetch bank summary
+      const summary = await getBankSummary(profile.capital_one_id);
+      
+      // Build response message
+      let response = `Here's your financial summary: You have a monthly income of $${summary.monthly_inflow.toFixed(2)} and monthly expenses of $${summary.monthly_outflow.toFixed(2)} (±$${summary.monthly_outflow_std.toFixed(2)}). `;
+      
+      // Add top spending categories
+      const topCategories = Object.entries(summary.categories).slice(0, 3);
+      if (topCategories.length > 0) {
+        const categoryList = topCategories.map(([cat, amt]) => `${cat} ($${amt.toFixed(2)})`).join(', ');
+        response += `Your top spending categories are: ${categoryList}. `;
+      }
+      
+      // Optionally fetch and include savings tips
+      if (includeSavingsTips) {
+        const tips = await getSavingsTips(profile.capital_one_id, 3);
+        if (tips.tips.length > 0) {
+          response += `I can help you save about $${tips.estimated_monthly_savings.toFixed(2)} per month. `;
+          const topTip = tips.tips[0];
+          response += `For example, ${topTip.suggestion}`;
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error getting bank info:', error);
+      return `Failed to fetch your financial information: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  };
+
   const conversation = useConversation({
+    overrides: {
+      agent: {
+        firstMessage: profile?.first_name 
+          ? `Hi ${profile.first_name}! I'm your Toyota vehicle assistant. How can I help you find your perfect car today?`
+          : 'Hi there! I\'m your Toyota vehicle assistant. How can I help you find your perfect car today?',
+      },
+    },
     clientTools: { 
       search_car: displayCarInfo,
       get_financing_options: getFinancingOptions,
-      get_trim_recommendations: getTrimRecsForUser
+      get_trim_recommendations: getTrimRecsForUser,
+      get_bank_info: getBankInfo
     },
     onConnect: () => {
       setIsConnecting(false);
