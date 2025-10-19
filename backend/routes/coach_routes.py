@@ -165,25 +165,19 @@ async def speak_quote(x: QuoteRequest):
         return Response(content=r.content, media_type="audio/mpeg")
 
 from fastapi import Depends
-from .nessie_routes import summary as nessie_summary  # relative import if routes is a package
+# ===== Nessie-assisted quoting & speech ======================================
+from routes.nessie_routes import summary as nessie_summary  # absolute import to avoid pkg issues
 
 @coach_router.post("/quote-from-nessie/{customer_id}", response_model=QuoteResponse)
-async def quote_from_nessie(
-    customer_id: str,
-    x: QuoteRequest
-):
+async def quote_from_nessie(customer_id: str, x: QuoteRequest):
     """
     Use Nessie to populate affordability fields (income/outflows/bills),
     while the caller provides the vehicle pricing knobs.
     """
-    # fetch financial summary (works in DEV even without API key due to fallback)
-    s = await nessie_summary(customer_id)  # returns NessieSummaryOut-compatible dict
-
-    # override affordability fields from Nessie
-    x.gross_monthly_income   = x.gross_monthly_income   or s["monthly_inflow"]
-    x.avg_monthly_outflows   = x.avg_monthly_outflows   or s["monthly_outflow"]
-    x.recurring_bills        = x.recurring_bills        or s["recurring_bills"]
-
+    s = await nessie_summary(customer_id)  # works in DEV via fallback
+    x.gross_monthly_income = x.gross_monthly_income or s["monthly_inflow"]
+    x.avg_monthly_outflows = x.avg_monthly_outflows or s["monthly_outflow"]
+    x.recurring_bills = x.recurring_bills or s["recurring_bills"]
     return quote(x)
 
 @coach_router.post("/speak-quote-from-nessie/{customer_id}", response_class=Response)
@@ -198,7 +192,9 @@ async def speak_quote_from_nessie(customer_id: str, x: QuoteRequest):
 
     # 3) Compute quote and speech script
     q = quote(x)
-    script = _mk_script(q.finance, q.lease, q.preferred_plan, q.monthly_target, q.advice, q.notes, q.suggestions)
+    script = _mk_script(
+        q.finance, q.lease, q.preferred_plan, q.monthly_target, q.advice, q.notes, q.suggestions
+    )
 
     # 4) ElevenLabs TTS
     api_key = os.getenv("ELEVEN_API_KEY") or os.getenv("ELEVENLABS_API_KEY")
@@ -208,9 +204,11 @@ async def speak_quote_from_nessie(customer_id: str, x: QuoteRequest):
 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"xi-api-key": api_key, "Content-Type": "application/json", "Accept": "audio/mpeg"}
-    payload = {"text": script, "model_id": "eleven_monolingual_v1",
-               "voice_settings": {"stability": 0.5, "similarity_boost": 0.7}}
-
+    payload = {
+        "text": script,
+        "model_id": "eleven_monolingual_v1",
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.7},
+    }
     async with httpx.AsyncClient(timeout=45.0) as client:
         r = await client.post(url, headers=headers, json=payload)
         r.raise_for_status()
@@ -219,3 +217,87 @@ async def speak_quote_from_nessie(customer_id: str, x: QuoteRequest):
             media_type="audio/mpeg",
             headers={"Content-Disposition": "attachment; filename=quote_nessie.mp3"},
         )
+
+# ===== What-if analysis =======================================================
+from pydantic import BaseModel
+
+class WhatIfIn(BaseModel):
+    # Required: original QuoteRequest
+    original: QuoteRequest
+    # Optional deltas/overrides
+    delta_down: float | None = None          # e.g., +1000
+    delta_term: int | None = None            # e.g., +12
+    override_apr: float | None = None        # (hook not wired yet)
+    override_miles_per_year: int | None = None
+
+@coach_router.post("/what-if", response_model=QuoteResponse)
+def what_if(x: WhatIfIn):
+    req = x.original.model_copy(deep=True)
+
+    if x.delta_down:
+        req.down_payment = max(0.0, req.down_payment + x.delta_down)
+    if x.delta_term:
+        req.term_months = max(12, req.term_months + x.delta_term)
+    if x.override_apr is not None:
+        # TODO: expose APR override in calc_finance if you want true APR control.
+        # For now, we ignore or could map to a pseudo credit-score tweak.
+        pass
+    if x.override_miles_per_year is not None:
+        req.miles_per_year = x.override_miles_per_year
+
+    return quote(req)
+
+from fastapi import APIRouter
+from typing import Dict, Any
+
+@coach_router.post("/quote-ui")
+def quote_ui(x: QuoteRequest) -> Dict[str, Any]:
+    # Reuse your existing logic to keep consistency
+    q = quote(x)
+
+    # Finance block
+    fin = q.finance
+    loan_monthly = float(fin["total_monthly"])
+    loan_total_interest = float(fin["total_interest"])
+    loan_total_cost = round(loan_monthly * x.term_months + x.down_payment, 2)
+    loan_apr_pct = round(float(fin["apr"]) * 100, 2) if fin["apr"] <= 1 else round(float(fin["apr"]), 2)
+
+    # Lease block
+    lea = q.lease
+    lease_monthly = float(lea["total_monthly"])
+    lease_total_payments = round(lease_monthly * x.term_months, 2)
+    residual_value = float(lea["residual_value"])
+    buyout_cost = residual_value  # + fees if you want to model them
+    total_if_purchased = round(lease_total_payments + buyout_cost, 2)
+    # Convert MF → APR% for display
+    mf = float(lea["money_factor"])
+    lease_apr_pct = round(mf * 2400, 2)
+
+    return {
+        "best_loan": {
+            "monthly_payment": round(loan_monthly, 2),
+            "total_interest": round(loan_total_interest, 2),
+            "total_cost": loan_total_cost,
+            "apr": loan_apr_pct,
+            "term_months": x.term_months,
+            "down_payment": round(x.down_payment, 2),
+        },
+        "best_lease": {
+            "monthly_payment": round(lease_monthly, 2),
+            "total_lease_payments": lease_total_payments,
+            "residual_value": round(residual_value, 2),
+            "buyout_cost": round(buyout_cost, 2),
+            "total_if_purchased": total_if_purchased,
+            "term_months": x.term_months,
+            "apr": lease_apr_pct,
+        },
+    }
+
+@coach_router.post("/quote-ui-from-nessie/{customer_id}")
+async def quote_ui_from_nessie(customer_id: str, x: QuoteRequest):
+    # hydrate affordability from Nessie first
+    s = await nessie_summary(customer_id)
+    x.gross_monthly_income = x.gross_monthly_income or s["monthly_inflow"]
+    x.avg_monthly_outflows = x.avg_monthly_outflows or s["monthly_outflow"]
+    x.recurring_bills = x.recurring_bills or s["recurring_bills"]
+    return quote_ui(x)
