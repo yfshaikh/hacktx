@@ -352,7 +352,7 @@ export function CarSidebar({ car, isOpen, onClose }: CarSidebarProps) {
             </div>
 
             {/* Footer Actions */}
-            <div className="border-t border-[var(--border)] p-4 flex-shrink-0">
+            {/* <div className="border-t border-[var(--border)] p-4 flex-shrink-0">
               <div className="space-y-3">
                 <Button className="w-full bg-[var(--toyota-red)] hover:bg-[var(--toyota-red-dark)] text-[var(--toyota-white)]">
                   Schedule Test Drive
@@ -367,7 +367,7 @@ export function CarSidebar({ car, isOpen, onClose }: CarSidebarProps) {
                   </Button>
                 )}
               </div>
-            </div>
+            </div> */}
           </div>
         </motion.div>
       )}

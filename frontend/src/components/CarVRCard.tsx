@@ -362,7 +362,7 @@ export function CarVRCard({ car, isOpen, onClose, position = 0 }: CarVRCardProps
                   </div> */}
 
                   {/* Actions */}
-                  <div className="space-y-3 pt-4">
+                  {/* <div className="space-y-3 pt-4">
                     <Button className="w-full bg-[var(--toyota-red)] hover:bg-[var(--toyota-red-dark)] text-[var(--toyota-white)]">
                       Schedule Test Drive
                     </Button>
@@ -375,7 +375,7 @@ export function CarVRCard({ car, isOpen, onClose, position = 0 }: CarVRCardProps
                         View Full Details
                       </Button>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
